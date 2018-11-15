@@ -8,3 +8,7 @@ cmake-build-debug/CMakeFiles/clion-log\.txt
 dep/
 
 obj/
+
+bin/
+
+debug/
