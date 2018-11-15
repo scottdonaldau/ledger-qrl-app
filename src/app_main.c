@@ -451,37 +451,6 @@ void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
     view_update_state(500);
 }
 
-uint16_t get_qrltx_size(const qrltx_t *tx_p) {
-    if (tx_p->subitem_count == 0) {
-        THROW(APDU_CODE_DATA_INVALID);
-    }
-    if (tx_p->subitem_count > QRLTX_SUBITEM_MAX) {
-        THROW(APDU_CODE_DATA_INVALID);
-    }
-
-    // validate sizes
-    switch (tx_p->type) {
-        case QRLTX_TX: {
-            const uint16_t delta = (uint16_t)(&tx_p->tx.dst - tx_p);
-            const uint16_t req_size = delta + sizeof(qrltx_tx_t) * tx_p->subitem_count;
-            return req_size;
-        }
-        case QRLTX_TXTOKEN: {
-            const uint16_t delta = (uint16_t)(&tx_p->txtoken.dst - tx_p);
-            const uint16_t req_size = delta + sizeof(qrltx_txtoken_t) * tx_p->subitem_count;
-            return req_size;
-        }
-        case QRLTX_SLAVE: {
-            const uint16_t delta = (uint16_t)(&tx_p->slave.slaves - tx_p);
-            const uint16_t req_size = delta + sizeof(qrltx_slave_t) * tx_p->subitem_count;
-            return req_size;
-        }
-        default: {
-            THROW(APDU_CODE_DATA_INVALID);
-        }
-    }
-}
-
 /// Get the message to sign from the buffer
 bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     if (rx != 5 + 32) {
@@ -504,7 +473,10 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     const qrltx_t *tx_p = msg;
 
     // TODO: move the buffer to the tx ctx and validate, throw if the message is invalid
-    const uint16_t req_size = get_qrltx_size(tx_p);
+    const int16_t req_size = get_qrltx_size(tx_p);
+    if (req_size < 0 ){
+        THROW(APDU_CODE_DATA_INVALID);
+    }
 
     // validate sizes
     switch (tx_p->type) {

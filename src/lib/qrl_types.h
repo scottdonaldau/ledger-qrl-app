@@ -54,3 +54,5 @@ typedef struct {
   };
 } qrltx_t;
 #pragma pack(pop)
+
+int16_t get_qrltx_size(const qrltx_t *tx_p);
