@@ -16,7 +16,6 @@
 ********************************************************************************/
 #include <string.h>
 #include "glyphs.h"
-#include "app.h"
 #include "view.h"
 #include "app_main.h"
 #include "apdu_codes.h"
@@ -169,15 +168,19 @@ uint64_t uint64_from_BEarray(const uint8_t data[8]) {
 }
 
 void view_txinfo_show() {
+    // TODO: maybe decouple this to make it testable
+
 #define EXIT_VIEW() {view_sign_menu(); return;}
 #define PTR_DIST(p2, p1) ((char *)p2) - ((char *)p1)
 
     if (view_idx < 0 || view_idx > 50) {
+        // TODO: Check bounds, 50?
         EXIT_VIEW();
     }
 
-    // TODO: Validate TX minimum SIZES
+    // TODO: Call get_qrltx_size to verify that the amount of received bytes matches the description
 
+    // TODO: Validate TX minimum SIZES
     uint8_t
     elem_idx = 0;
 
@@ -204,7 +207,7 @@ void view_txinfo_show() {
 
                     qrltx_addr_block *dst = &ctx.qrltx.tx.dst[elem_idx];
 
-                    if (elem_idx % 2 == 0) {
+                    if (view_idx % 2 == 0) {
                         snprintf(view_buffer_key, sizeof(view_buffer_key), "dst %d", elem_idx);
                         ARRTOHEX(view_buffer_value, dst->address);
                     } else {
@@ -241,7 +244,7 @@ void view_txinfo_show() {
 
                     qrltx_addr_block *dst = &ctx.qrltx.txtoken.dst[elem_idx];
 
-                    if (elem_idx % 2 == 0) {
+                    if (view_idx % 2 == 0) {
                         snprintf(view_buffer_key, sizeof(view_buffer_key), "dst %d", elem_idx);
                         ARRTOHEX(view_buffer_value, dst->address);
                     } else {
@@ -273,12 +276,7 @@ void view_txinfo_show() {
                     if (elem_idx > QRLTX_SUBITEM_MAX) EXIT_VIEW();
                     if (elem_idx > ctx.qrltx.subitem_count) EXIT_VIEW();
 
-                    qrltx_slave_block *dst = &ctx.qrltx.slave.slaves[elem_idx];
-                    if (PTR_DIST(dst, &ctx.qrltx.slave) > ctx.qrltx.payload_size) {
-                        EXIT_VIEW();
-                    }
-
-                    if (elem_idx % 2 == 0) {
+                    if (view_idx % 2 == 0) {
                         snprintf(view_buffer_key, sizeof(view_buffer_key), "slave pk %d", elem_idx);
                         ARRTOHEX(view_buffer_value, ctx.qrltx.slave.slaves[elem_idx].pk);
                     } else {

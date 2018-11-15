@@ -474,24 +474,8 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
 
     // TODO: move the buffer to the tx ctx and validate, throw if the message is invalid
     const int16_t req_size = get_qrltx_size(tx_p);
-    if (req_size < 0 ){
+    if (req_size < 0 || req_size != rx){
         THROW(APDU_CODE_DATA_INVALID);
-    }
-
-    // validate sizes
-    switch (tx_p->type) {
-        case QRLTX_TX: {
-            break;
-        }
-        case QRLTX_TXTOKEN: {
-            break;
-        }
-        case QRLTX_SLAVE: {
-            break;
-        }
-        default: {
-            THROW(APDU_CODE_DATA_INVALID);
-        }
     }
 
     // nvm_write((void*) N_appdata.unsigned_message, (void*) msg, 32);
