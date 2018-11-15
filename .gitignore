@@ -1,2 +1,6 @@
 
 \.idea/
+
+cmake-build-debug/googletest-src
+
+cmake-build-debug/CMakeFiles/clion-log\.txt
