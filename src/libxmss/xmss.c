@@ -1,6 +1,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
-#include <xmss.h>
+#include "xmss.h"
 
 #define BUF_MAX_IDX 34      // split point between ram and nvram
 

@@ -1,2 +1,0 @@
-pytest
-pyledgerqrl >= 0.3

@@ -24,8 +24,7 @@
 
 #include "apdu_codes.h"
 #include "xmss.h"
-#include "nvram.h"
-#include "storage.h"
+#include "nvram.h"#include "storage.h"
 
 #define CONDITIONAL_REDISPLAY  { if (UX_ALLOWED) UX_REDISPLAY() };
 
