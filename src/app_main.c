@@ -104,7 +104,6 @@ void app_init() {
     memset(&ctx, 0, sizeof(app_ctx_t));
 }
 
-#define VERSION_TESTING 0x00
 #ifdef TESTING_ENABLED
 const uint8_t test_seed[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -114,8 +113,6 @@ const uint8_t test_seed[] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
-#undef VERSION_TESTING
-#define VERSION_TESTING 0xFF
 
 void test_set_state(volatile uint32_t *tx, uint32_t rx)
 {
@@ -175,7 +172,7 @@ void test_keygen(volatile uint32_t* tx, uint32_t rx)
     UNUSED(p2);
     UNUSED(data);
 
-    keygen();
+    app_initialize_xmss_step();
 
     G_io_apdu_buffer[0] = N_appdata.mode;
     G_io_apdu_buffer[1] = N_appdata.xmss_index >> 8;
@@ -312,7 +309,11 @@ void app_get_version(volatile uint32_t *tx, uint32_t rx) {
     UNUSED(p2);
     UNUSED(data);
 
-    G_io_apdu_buffer[0] = VERSION_TESTING;
+#ifdef TESTING_ENABLED
+    G_io_apdu_buffer[0] = 0xFF;
+#else
+    G_io_apdu_buffer[0] = 0;
+#endif
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
@@ -349,36 +350,46 @@ void app_get_state(volatile uint32_t *tx, uint32_t rx) {
 }
 
 void get_seed(uint8_t *seed) {
+#ifdef TESTING_ENABLED
+    // Set the zero to all zeros for reproducible tests
+    mem_set(seed, 0, 48);
+#else
+    // TODO: Leon should review this
     // based on RFC8032, the private key is 32 octets (256 bits, corresponding to b) of
     // cryptographically secure random data.
+    // To ensure higher entropy, we take 128 octets from 4 private keys
     uint8_t
-    privateKeyData1[32];
-    uint8_t
-    privateKeyData2[32];
+    privateKeyData[128];
 
     uint32_t bip32_path[5] = {
             0x80000000 | 44,
-            0x80000000 | 60,
+            0x80000000 | 238,
             0x80000000 | 0,
             0x80000000 | 0,
             0x80000000 | 0
     };
 
-    os_perso_derive_node_bip32(CX_CURVE_Ed25519, bip32_path, 5, privateKeyData1, NULL);
-    bip32_path[2]++;
-    os_perso_derive_node_bip32(CX_CURVE_Ed25519, bip32_path, 5, privateKeyData2, NULL);
+    for (int i = 0; i < 4; i++) {
+        bip32_path[4] = i;
+        os_perso_derive_node_bip32(CX_CURVE_Ed25519, bip32_path, 5, privateKeyData + (32 * i), NULL);
+    }
 
-    memcpy(seed, privateKeyData1, 32);
-    memcpy(seed + 32, privateKeyData2, 16);
+    shake256(seed, 48, privateKeyData, 128)
+#endif
 }
 
-char keygen() {
+char app_initialize_xmss_step() {
     if (N_appdata.mode != APPMODE_NOT_INITIALIZED && N_appdata.mode != APPMODE_KEYGEN_RUNNING) {
         return false;
     }
-
     appstorage_t tmp;
 
+#ifdef TESTING_ENABLED
+    // TODO: Set all leaves using pregenerated values for an empty seed
+
+    return 1; // Keys are ready
+#else
+    // Generate all leaves
     if (N_appdata.mode == APPMODE_NOT_INITIALIZED) {
         uint8_t
         seed[48];
@@ -421,6 +432,7 @@ char keygen() {
     nvm_write((void *) &N_appdata.raw, &tmp.raw, sizeof(tmp.raw));
 
     return N_appdata.mode != APPMODE_READY;
+#endif
 }
 
 void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
@@ -472,13 +484,14 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     const uint8_t *msg = G_io_apdu_buffer + 5;
     const qrltx_t *tx_p = msg;
 
-    // TODO: move the buffer to the tx ctx and validate, throw if the message is invalid
+    // Validate message size
     const int16_t req_size = get_qrltx_size(tx_p);
-    if (req_size < 0 || req_size != rx){
+    if (req_size < 0 || req_size != rx) {
         THROW(APDU_CODE_DATA_INVALID);
     }
 
-    // nvm_write((void*) N_appdata.unsigned_message, (void*) msg, 32);
+    // move the buffer to the tx ctx
+    memcpy((uint8_t *) &ctx.qrltx, msg, rx);
 
     return true;
 }
@@ -486,6 +499,7 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
 /// Hash the tx obj with SHA256 as the QRL node does
 void hash_tx(uint8_t hashed_msg[32], const uint8_t msg[256]) {
     // TODO: get the tx from the ctx object and hash according to the corresponding rules
+    // Get the length from get_qrltx_size
     // put the 32 bytes hash in msg
     memset(msg, 0, 32);
 }
@@ -561,152 +575,152 @@ void app_main() {
         volatile uint16_t sw = 0;
 
         BEGIN_TRY;
+        {
+            TRY;
             {
-                TRY;
-                    {
-                        rx = tx;
-                        tx = 0;
-                        rx = io_exchange(CHANNEL_APDU | flags, rx);
-                        flags = 0;
+                rx = tx;
+                tx = 0;
+                rx = io_exchange(CHANNEL_APDU | flags, rx);
+                flags = 0;
 
-                        if (rx == 0)
-                            THROW(0x6982);
+                if (rx == 0)
+                    THROW(0x6982);
 
-                        if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
-                            THROW(APDU_CODE_CLA_NOT_SUPPORTED);
+                if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
+                    THROW(APDU_CODE_CLA_NOT_SUPPORTED);
+                }
+
+                switch (G_io_apdu_buffer[OFFSET_INS]) {
+
+                    case INS_VERSION: {
+                        app_get_version(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
+
+                    case INS_GETSTATE: {
+                        app_get_state(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
+
+                    case INS_PUBLIC_KEY: {
+                        app_get_pk(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
+
+                    case INS_SIGN: {
+                        if (N_appdata.mode != APPMODE_READY) {
+                            THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
                         }
 
-                        switch (G_io_apdu_buffer[OFFSET_INS]) {
+                        parse_unsigned_message(&tx, rx);
 
-                            case INS_VERSION: {
-                                app_get_version(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                        view_sign_menu();
+                        flags |= IO_ASYNCH_REPLY;
+                        break;
+                    }
 
-                            case INS_GETSTATE: {
-                                app_get_state(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
-
-                            case INS_PUBLIC_KEY: {
-                                app_get_pk(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
-
-                            case INS_SIGN: {
-                                if (N_appdata.mode != APPMODE_READY) {
-                                    THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
-                                }
-
-                                parse_unsigned_message(&tx, rx);
-
-                                view_sign_menu();
-                                flags |= IO_ASYNCH_REPLY;
-                                break;
-                            }
-
-                            case INS_SIGN_NEXT: {
-                                debug_printf("SIGNING");
-                                app_sign_next(&tx, rx);
-                                view_update_state(1000);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_SIGN_NEXT: {
+                        debug_printf("SIGNING");
+                        app_sign_next(&tx, rx);
+                        view_update_state(1000);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
 #ifdef TESTING_ENABLED
-                            case INS_TEST_PK_GEN_1: {
-                                xmss_gen_keys_1_get_seeds(&N_DATA.sk, test_seed);
-                                os_memmove(G_io_apdu_buffer, N_DATA.sk.raw, 132);
-                                tx+=132;
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_PK_GEN_1: {
+                        xmss_gen_keys_1_get_seeds(&N_DATA.sk, test_seed);
+                        os_memmove(G_io_apdu_buffer, N_DATA.sk.raw, 132);
+                        tx+=132;
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_PK_GEN_2: {
-                                test_pk_gen2(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_PK_GEN_2: {
+                        test_pk_gen2(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_KEYGEN: {
-                                test_keygen(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_KEYGEN: {
+                        test_keygen(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_WRITE_LEAF: {
-                                test_write_leaf(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_WRITE_LEAF: {
+                        test_write_leaf(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_CALC_PK: {
-                                test_calc_pk(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_CALC_PK: {
+                        test_calc_pk(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_READ_LEAF: {
-                                test_read_leaf(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_READ_LEAF: {
+                        test_read_leaf(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_SETSTATE: {
-                                test_set_state(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_SETSTATE: {
+                        test_set_state(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_DIGEST: {
-                                test_digest(&tx, rx);
-                                THROW(APDU_CODE_OK);
-                                break;
-                            }
+                    case INS_TEST_DIGEST: {
+                        test_digest(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
 
-                            case INS_TEST_COMM:
+                    case INS_TEST_COMM:
+                    {
+                        uint8_t count = G_io_apdu_buffer[2];
+                        for (int i = 0; i < count; i++)
                             {
-                                uint8_t count = G_io_apdu_buffer[2];
-                                for (int i = 0; i < count; i++)
-                                    {
-                                        G_io_apdu_buffer[i] = 1+i;
-                                        tx++;
-                                    }
-                                THROW(APDU_CODE_OK);
+                                G_io_apdu_buffer[i] = 1+i;
+                                tx++;
                             }
+                        THROW(APDU_CODE_OK);
+                    }
 #endif
-                            default: {
-                                THROW(APDU_CODE_INS_NOT_SUPPORTED);
-                            }
+                    default: {
+                        THROW(APDU_CODE_INS_NOT_SUPPORTED);
+                    }
 
-                        }
-                    }
-                CATCH(EXCEPTION_IO_RESET)
-                    {
-                        THROW(EXCEPTION_IO_RESET);
-                    }
-                CATCH_OTHER(e);
-                    {
-                        switch (e & 0xF000) {
-                            case 0x6000:
-                            case APDU_CODE_OK: {
-                                sw = e;
-                                break;
-                            }
-                            default:
-                                sw = 0x6800 | (e & 0x7FF);
-                                break;
-                        }
-                        G_io_apdu_buffer[tx] = sw >> 8;
-                        G_io_apdu_buffer[tx + 1] = sw;
-                        tx += 2;
-                    }
-                FINALLY;
-                {}
+                }
             }
+            CATCH(EXCEPTION_IO_RESET)
+            {
+                THROW(EXCEPTION_IO_RESET);
+            }
+            CATCH_OTHER(e);
+            {
+                switch (e & 0xF000) {
+                    case 0x6000:
+                    case APDU_CODE_OK: {
+                        sw = e;
+                        break;
+                    }
+                    default:
+                        sw = 0x6800 | (e & 0x7FF);
+                        break;
+                }
+                G_io_apdu_buffer[tx] = sw >> 8;
+                G_io_apdu_buffer[tx + 1] = sw;
+                tx += 2;
+            }
+            FINALLY;
+            {}
+        }
         END_TRY;
     }
 }

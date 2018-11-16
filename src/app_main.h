@@ -55,4 +55,4 @@ void app_main();
 
 void app_sign();
 
-char keygen();
+char app_initialize_xmss_step();

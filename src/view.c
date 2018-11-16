@@ -174,7 +174,7 @@ const bagl_element_t *view_txinfo_prepro(const bagl_element_t *element) {
 void handler_init_device(unsigned int unused) {
     UNUSED(unused);
 //  UX_DISPLAY(bagl_ui_keygen, NULL);
-    while (keygen()) {
+    while (app_initialize_xmss_step()) {
         view_update_state(50);
     }
     view_update_state(50);
