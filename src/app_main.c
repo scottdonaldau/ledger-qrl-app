@@ -90,6 +90,40 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     return 0;
 }
 
+
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+
+void get_seed(uint8_t *seed) {
+#ifdef TESTING_ENABLED
+    // Set the zero to all zeros for reproducible tests
+    memset(seed, 0, 48);
+#else
+    // TODO: Leon should review this
+    // based on RFC8032, the private key is 32 octets (256 bits, corresponding to b) of
+    // cryptographically secure random data.
+    // To ensure higher entropy, we take 128 octets from 4 private keys
+    uint8_t
+    privateKeyData[128];
+
+    uint32_t bip32_path[5] = {
+            0x80000000 | 44,
+            0x80000000 | 238,
+            0x80000000 | 0,
+            0x80000000 | 0,
+            0x80000000 | 0
+    };
+
+    for (int i = 0; i < 4; i++) {
+        bip32_path[4] = i;
+        os_perso_derive_node_bip32(CX_CURVE_Ed25519, bip32_path, 5, privateKeyData + (32 * i), NULL);
+    }
+
+    shake256(seed, 48, privateKeyData, 128)
+#endif
+}
+
+
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
 
@@ -105,15 +139,6 @@ void app_init() {
 }
 
 #ifdef TESTING_ENABLED
-const uint8_t test_seed[] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-};
-
 void test_set_state(volatile uint32_t *tx, uint32_t rx)
 {
     if (rx<5)
@@ -150,7 +175,10 @@ void test_pk_gen2(volatile uint32_t *tx, uint32_t rx)
     const uint16_t idx = (p1<<8u)+p2;
     const uint8_t *p=N_DATA.xmss_nodes + 32 * idx;
 
-    xmss_gen_keys_1_get_seeds(&N_DATA.sk, test_seed);
+    uint8_t seed[48];
+    get_seed(seed);
+
+    xmss_gen_keys_1_get_seeds(&N_DATA.sk, seed);
     xmss_gen_keys_2_get_nodes((uint8_t*) &N_DATA.wots_buffer, (void*)p, &N_DATA.sk, idx);
 
     os_memmove(G_io_apdu_buffer, p, 32);
@@ -274,7 +302,10 @@ void test_digest(volatile uint32_t *tx, uint32_t rx)
     UNUSED(p2);
     UNUSED(data);
 
-    xmss_gen_keys_1_get_seeds(&N_DATA.sk, test_seed);
+    uint8_t seed[48];
+    get_seed(seed);
+
+    xmss_gen_keys_1_get_seeds(&N_DATA.sk, seed);
 
     xmss_digest_t digest;
     memset(digest.raw, 0, XMSS_DIGESTSIZE);
@@ -291,6 +322,33 @@ void test_digest(volatile uint32_t *tx, uint32_t rx)
     view_update_state(2000);
 }
 
+void test_get_seed(volatile uint32_t *tx, uint32_t rx)
+{
+    if (rx<5)
+    {
+        THROW(APDU_CODE_WRONG_LENGTH);
+    }
+    const uint8_t p1 = G_io_apdu_buffer[2];
+    const uint8_t p2 = G_io_apdu_buffer[3];
+    const uint8_t *data = G_io_apdu_buffer+5;
+
+    UNUSED(p1);
+    UNUSED(p2);
+    UNUSED(data);
+
+    uint8_t seed[48];
+    get_seed(seed);
+
+    os_memmove(G_io_apdu_buffer, seed, 48);
+    *tx+=48;
+
+    snprintf(view_buffer_value,
+            sizeof(view_buffer_value),
+            "GET_SEED");
+    debug_printf(view_buffer_value);
+
+    view_update_state(500);
+}
 #endif
 
 ///////////////////////////////////////////////////////////
@@ -310,8 +368,10 @@ void app_get_version(volatile uint32_t *tx, uint32_t rx) {
     UNUSED(data);
 
 #ifdef TESTING_ENABLED
+    const char *ver_str = "Ver %02d.%02d.%02d TEST";
     G_io_apdu_buffer[0] = 0xFF;
 #else
+    const char *ver_str = "Ver %02d.%02d.%02d";
     G_io_apdu_buffer[0] = 0;
 #endif
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
@@ -320,7 +380,7 @@ void app_get_version(volatile uint32_t *tx, uint32_t rx) {
     *tx += 4;
 
     snprintf(view_buffer_value, sizeof(view_buffer_value),
-             "Ver %02d.%02d.%02d",
+             ver_str,
              LEDGER_MAJOR_VERSION,
              LEDGER_MINOR_VERSION,
              LEDGER_PATCH_VERSION);
@@ -349,35 +409,6 @@ void app_get_state(volatile uint32_t *tx, uint32_t rx) {
     view_update_state(500);
 }
 
-void get_seed(uint8_t *seed) {
-#ifdef TESTING_ENABLED
-    // Set the zero to all zeros for reproducible tests
-    mem_set(seed, 0, 48);
-#else
-    // TODO: Leon should review this
-    // based on RFC8032, the private key is 32 octets (256 bits, corresponding to b) of
-    // cryptographically secure random data.
-    // To ensure higher entropy, we take 128 octets from 4 private keys
-    uint8_t
-    privateKeyData[128];
-
-    uint32_t bip32_path[5] = {
-            0x80000000 | 44,
-            0x80000000 | 238,
-            0x80000000 | 0,
-            0x80000000 | 0,
-            0x80000000 | 0
-    };
-
-    for (int i = 0; i < 4; i++) {
-        bip32_path[4] = i;
-        os_perso_derive_node_bip32(CX_CURVE_Ed25519, bip32_path, 5, privateKeyData + (32 * i), NULL);
-    }
-
-    shake256(seed, 48, privateKeyData, 128)
-#endif
-}
-
 char app_initialize_xmss_step() {
     if (N_appdata.mode != APPMODE_NOT_INITIALIZED && N_appdata.mode != APPMODE_KEYGEN_RUNNING) {
         return false;
@@ -386,9 +417,13 @@ char app_initialize_xmss_step() {
 
 #ifdef TESTING_ENABLED
     // TODO: Set all leaves using pregenerated values for an empty seed
+    tmp.mode = APPMODE_READY;
+    tmp.xmss_index = 0;
 
-    return 1; // Keys are ready
+    nvm_write((void *) &N_appdata.raw, &tmp.raw, sizeof(tmp.raw));
+    return 0; // Keys are ready
 #else
+
     // Generate all leaves
     if (N_appdata.mode == APPMODE_NOT_INITIALIZED) {
         uint8_t
@@ -491,7 +526,7 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     }
 
     // move the buffer to the tx ctx
-    memcpy((uint8_t *) &ctx.qrltx, msg, rx);
+    memcpy((uint8_t * ) & ctx.qrltx, msg, rx);
 
     return true;
 }
@@ -632,7 +667,10 @@ void app_main() {
 
 #ifdef TESTING_ENABLED
                     case INS_TEST_PK_GEN_1: {
-                        xmss_gen_keys_1_get_seeds(&N_DATA.sk, test_seed);
+                        uint8_t seed[48];
+                        get_seed(seed);
+
+                        xmss_gen_keys_1_get_seeds(&N_DATA.sk, seed);
                         os_memmove(G_io_apdu_buffer, N_DATA.sk.raw, 132);
                         tx+=132;
                         THROW(APDU_CODE_OK);
@@ -690,6 +728,12 @@ void app_main() {
                                 tx++;
                             }
                         THROW(APDU_CODE_OK);
+                    }
+
+                    case INS_TEST_GETSEED: {
+                        test_get_seed(&tx, rx);
+                        THROW(APDU_CODE_OK);
+                        break;
                     }
 #endif
                     default: {

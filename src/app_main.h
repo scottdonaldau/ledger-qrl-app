@@ -42,6 +42,7 @@ extern app_ctx_t ctx;
 #define INS_TEST_DIGEST         0x86
 #define INS_TEST_SETSTATE       0x87
 #define INS_TEST_COMM           0x88
+#define INS_TEST_GETSEED        0x89
 
 #define APPMODE_NOT_INITIALIZED    0x00
 #define APPMODE_KEYGEN_RUNNING     0x01

@@ -14,7 +14,5 @@
 *  limitations under the License.
 ********************************************************************************/
 
-#ifndef LEDGER_QRL_TEST_DATA_H
-#define LEDGER_QRL_TEST_DATA_H
+#pragma once
 
-#endif //LEDGER_QRL_TEST_DATA_H
