@@ -80,7 +80,7 @@ const ux_menu_entry_t menu_main_not_ready[] = {
 };
 
 const ux_menu_entry_t menu_about[] = {
-        {menu_main, NULL, 0, &C_icon_back, "Version", APPVERSION, 0, 0},
+        {NULL, handler_main_menu_select, 0, &C_icon_back, "Version", APPVERSION, 0, 0},
         UX_MENU_END
 };
 
@@ -178,6 +178,7 @@ void handler_init_device(unsigned int unused) {
         view_update_state(50);
     }
     view_update_state(50);
+    view_main_menu();
 }
 
 void handler_main_menu_select(unsigned int _) {
