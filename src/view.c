@@ -33,6 +33,8 @@ char view_buffer_value[MAX_CHARS_PER_VALUE_LINE];
 int8_t view_idx;
 
 #define COND_SCROLL_L2 0xF0
+#define ARRTOHEX(X, Y) array_to_hexstr(X, Y, sizeof(Y))
+#define AMOUNT_TO_STR(OUTPUT, AMOUNT, DECIMALS) fpuint64_to_str(OUTPUT, uint64_from_BEarray(AMOUNT), DECIMALS)
 
 ////////////////////////////////////////////////
 //------ View elements
@@ -41,12 +43,18 @@ const ux_menu_entry_t menu_main[];
 const ux_menu_entry_t menu_about[];
 const ux_menu_entry_t menu_sign[];
 
-const ux_menu_entry_t menu_sign[] = {
-        {NULL, handler_view_tx, 0, NULL, "View transaction", NULL, 0, 0},
-        {NULL, handler_sign_tx, 0, NULL, "Sign transaction", NULL, 0, 0},
-        {NULL, handler_reject_tx, 0, &C_icon_back, "Reject", NULL, 60, 40},
-        UX_MENU_END
-};
+void handler_view_tx(unsigned int);
+
+void handler_sign_tx(unsigned int);
+
+void handler_reject_tx(unsigned int);
+
+void handler_init_device(unsigned int);
+
+void handler_main_menu_select(unsigned int);
+
+void view_txinfo_show();
+
 
 const ux_menu_entry_t menu_main[] = {
 #if TESTING_ENABLED
@@ -73,6 +81,13 @@ const ux_menu_entry_t menu_main_not_ready[] = {
 
 const ux_menu_entry_t menu_about[] = {
         {menu_main, NULL, 0, &C_icon_back, "Version", APPVERSION, 0, 0},
+        UX_MENU_END
+};
+
+const ux_menu_entry_t menu_sign[] = {
+        {NULL, handler_view_tx, 0, NULL, "View transaction", NULL, 0, 0},
+        {NULL, handler_sign_tx, 0, NULL, "Sign transaction", NULL, 0, 0},
+        {NULL, handler_reject_tx, 0, &C_icon_back, "Reject", NULL, 60, 40},
         UX_MENU_END
 };
 
@@ -109,8 +124,6 @@ const bagl_element_t *menu_main_prepro(const ux_menu_entry_t *menu_entry, bagl_e
 
 ////////////////////////////////////////////////
 //------ Event handlers
-
-void view_txinfo_show();
 
 static unsigned int view_txinfo_button(unsigned int button_mask,
                                        unsigned int button_mask_counter) {
@@ -155,16 +168,87 @@ const bagl_element_t *view_txinfo_prepro(const bagl_element_t *element) {
     return element;
 }
 
-#define ARRTOHEX(X, Y) array_to_hexstr(X, Y, sizeof(Y))
-#define AMOUNT_TO_STR(OUTPUT, AMOUNT, DECIMALS) fpuint64_to_str(OUTPUT, uint64_from_BEarray(AMOUNT), DECIMALS)
+////////////////////////////////////////////////
+////////////////////////////////////////////////
 
-uint64_t uint64_from_BEarray(const uint8_t data[8]) {
-    uint64_t result = 0;
-    for (int i = 0; i < 8; i++) {
-        result <<= 8;
-        result += data[i];
+void handler_init_device(unsigned int unused) {
+    UNUSED(unused);
+//  UX_DISPLAY(bagl_ui_keygen, NULL);
+    while (keygen()) {
+        view_update_state(50);
     }
-    return result;
+    view_update_state(50);
+}
+
+void handler_main_menu_select(unsigned int _) {
+    view_main_menu();
+}
+
+void handler_view_tx(unsigned int unused) {
+    UNUSED(unused);
+//    debug_printf("Not implemented");
+//    view_update_state(2000);
+
+    view_idx = 0;
+    view_txinfo_show();
+}
+
+void handler_sign_tx(unsigned int unused) {
+    UNUSED(unused);
+    app_sign();
+    view_update_state(2000);
+}
+
+void handler_reject_tx(unsigned int unused) {
+    UNUSED(unused);
+    set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+    view_main_menu();
+}
+
+////////////////////////////////////////////////
+////////////////////////////////////////////////
+
+void view_init(void) {
+    UX_INIT();
+    view_uiState = UI_IDLE;
+}
+
+void view_main_menu(void) {
+    view_uiState = UI_IDLE;
+
+    if (N_appdata.mode != APPMODE_READY) {
+        UX_MENU_DISPLAY(0, menu_main_not_ready, menu_main_prepro);
+    } else {
+        UX_MENU_DISPLAY(0, menu_main, menu_main_prepro);
+    }
+}
+
+void view_sign_menu(void) {
+    view_uiState = UI_SIGN;
+    UX_MENU_DISPLAY(0, menu_sign, NULL);
+}
+
+void view_update_state(uint16_t interval) {
+    switch (N_appdata.mode) {
+        case APPMODE_NOT_INITIALIZED: {
+            snprintf(view_buffer_value, sizeof(view_buffer_value), "not ready ");
+        }
+            break;
+        case APPMODE_KEYGEN_RUNNING: {
+            snprintf(view_buffer_value, sizeof(view_buffer_value), "KEYGEN rem:%03d", 256 - N_appdata.xmss_index);
+        }
+            break;
+        case APPMODE_READY: {
+            if (N_appdata.xmss_index > 250) {
+                snprintf(view_buffer_value, sizeof(view_buffer_value), "WARN! rem:%03d", 256 - N_appdata.xmss_index);
+            } else {
+                snprintf(view_buffer_value, sizeof(view_buffer_value), "READY rem:%03d", 256 - N_appdata.xmss_index);
+            }
+        }
+            break;
+    }
+    UX_CALLBACK_SET_INTERVAL(interval);
 }
 
 void view_txinfo_show() {
@@ -292,80 +376,4 @@ void view_txinfo_show() {
     }
 
     UX_DISPLAY(view_txinfo, view_txinfo_prepro);
-}
-
-void handler_init_device(unsigned int unused) {
-    UNUSED(unused);
-//  UX_DISPLAY(bagl_ui_keygen, NULL);
-    while (keygen()) {
-        view_update_state(50);
-    }
-    view_update_state(50);
-}
-
-void handler_view_tx(unsigned int unused) {
-    UNUSED(unused);
-//    debug_printf("Not implemented");
-//    view_update_state(2000);
-
-    view_idx = 0;
-    view_txinfo_show();
-}
-
-void handler_sign_tx(unsigned int unused) {
-    UNUSED(unused);
-    app_sign();
-    view_update_state(2000);
-}
-
-void handler_reject_tx(unsigned int unused) {
-    UNUSED(unused);
-    set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
-    view_main_menu();
-}
-
-////////////////////////////////////////////////
-////////////////////////////////////////////////
-
-void view_init(void) {
-    UX_INIT();
-    view_uiState = UI_IDLE;
-}
-
-void view_main_menu(void) {
-    view_uiState = UI_IDLE;
-
-    if (N_appdata.mode != APPMODE_READY) {
-        UX_MENU_DISPLAY(0, menu_main_not_ready, menu_main_prepro);
-    } else {
-        UX_MENU_DISPLAY(0, menu_main, menu_main_prepro);
-    }
-}
-
-void view_sign_menu(void) {
-    view_uiState = UI_SIGN;
-    UX_MENU_DISPLAY(0, menu_sign, NULL);
-}
-
-void view_update_state(uint16_t interval) {
-    switch (N_appdata.mode) {
-        case APPMODE_NOT_INITIALIZED: {
-            snprintf(view_buffer_value, sizeof(view_buffer_value), "not ready ");
-        }
-            break;
-        case APPMODE_KEYGEN_RUNNING: {
-            snprintf(view_buffer_value, sizeof(view_buffer_value), "KEYGEN rem:%03d", 256 - N_appdata.xmss_index);
-        }
-            break;
-        case APPMODE_READY: {
-            if (N_appdata.xmss_index > 250) {
-                snprintf(view_buffer_value, sizeof(view_buffer_value), "WARN! rem:%03d", 256 - N_appdata.xmss_index);
-            } else {
-                snprintf(view_buffer_value, sizeof(view_buffer_value), "READY rem:%03d", 256 - N_appdata.xmss_index);
-            }
-        }
-            break;
-    }
-    UX_CALLBACK_SET_INTERVAL(interval);
 }
