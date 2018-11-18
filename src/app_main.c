@@ -523,7 +523,7 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
 
     // Validate message size
     const int32_t req_size = get_qrltx_size(tx_p);
-    if (req_size < 0 || (uint32_t) req_size != 5 + rx) {
+    if (req_size < 0 || (uint32_t) req_size + 5 != rx) {
         THROW(APDU_CODE_DATA_INVALID);
     }
 

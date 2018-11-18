@@ -97,6 +97,7 @@ static const bagl_element_t view_txinfo[] = {
         UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_RIGHT),
         UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
         UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
+        // TODO: Reduce width to avoid pixel rubbish
         UI_LabelLineScrolling(2, 0, 30, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
 };
 
@@ -173,7 +174,6 @@ const bagl_element_t *view_txinfo_prepro(const bagl_element_t *element) {
 
 void handler_init_device(unsigned int unused) {
     UNUSED(unused);
-//  UX_DISPLAY(bagl_ui_keygen, NULL);
     while (app_initialize_xmss_step()) {
         view_update_state(50);
     }
@@ -182,14 +182,12 @@ void handler_init_device(unsigned int unused) {
 }
 
 void handler_main_menu_select(unsigned int _) {
+    view_update_state(50);
     view_main_menu();
 }
 
 void handler_view_tx(unsigned int unused) {
     UNUSED(unused);
-//    debug_printf("Not implemented");
-//    view_update_state(2000);
-
     view_idx = 0;
     view_txinfo_show();
 }
@@ -204,6 +202,7 @@ void handler_reject_tx(unsigned int unused) {
     UNUSED(unused);
     set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
     io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+    view_update_state(50);
     view_main_menu();
 }
 
@@ -276,64 +275,72 @@ void view_txinfo_show() {
 
             switch (view_idx) {
                 case 0: {
-                    strcpy(view_buffer_key, "src addr");
+                    strcpy(view_buffer_key, "Source Addr");
                     ARRTOHEX(view_buffer_value, ctx.qrltx.tx.master.address);
                     break;
                 }
                 case 1: {
-                    strcpy(view_buffer_key, "fee (quanta)");
-                    AMOUNT_TO_STR(view_buffer_value, ctx.qrltx.tx.master.amount, QUANTA_DECIMALS);
+                    strcpy(view_buffer_key, "Fee (QRL)");
+
+                    ARRTOHEX(view_buffer_value, ctx.qrltx.tx.master.amount);
+
+//                    AMOUNT_TO_STR(view_buffer_value,
+//                                  ctx.qrltx.tx.master.amount,
+//                                  QUANTA_DECIMALS);
                     break;
                 }
                 default: {
                     elem_idx = (view_idx - 2) >> 1;
-                    if (elem_idx > QRLTX_SUBITEM_MAX) EXIT_VIEW();
-                    if (elem_idx > ctx.qrltx.subitem_count) EXIT_VIEW();
+                    if (elem_idx >= QRLTX_SUBITEM_MAX) EXIT_VIEW();
+                    if (elem_idx >= ctx.qrltx.subitem_count) EXIT_VIEW();
 
                     qrltx_addr_block *dst = &ctx.qrltx.tx.dst[elem_idx];
 
                     if (view_idx % 2 == 0) {
-                        snprintf(view_buffer_key, sizeof(view_buffer_key), "dst %d", elem_idx);
+                        snprintf(view_buffer_key, sizeof(view_buffer_key), "Dst %d", elem_idx);
                         ARRTOHEX(view_buffer_value, dst->address);
                     } else {
-                        snprintf(view_buffer_key, sizeof(view_buffer_key), "amount %d", elem_idx);
+                        snprintf(view_buffer_key, sizeof(view_buffer_key), "Amount %d (QRL)", elem_idx);
                         AMOUNT_TO_STR(view_buffer_value, dst->amount, QUANTA_DECIMALS);
                     }
                     break;
                 }
             }
+            break;
         }
         case QRLTX_TXTOKEN: {
             strcpy(view_title, "TRANSFER TOKEN");
 
             switch (view_idx) {
                 case 0: {
-                    strcpy(view_buffer_key, "src addr");
+                    strcpy(view_buffer_key, "Source Addr");
                     ARRTOHEX(view_buffer_value, ctx.qrltx.txtoken.master.address);
                     break;
                 }
                 case 1: {
-                    strcpy(view_buffer_key, "fee (quanta)");
-                    AMOUNT_TO_STR(view_buffer_value, ctx.qrltx.txtoken.master.amount, QUANTA_DECIMALS);
+                    strcpy(view_buffer_key, "Fee (QRL)");
+                    AMOUNT_TO_STR(view_buffer_value,
+                                  ctx.qrltx.txtoken.master.amount,
+                                  QUANTA_DECIMALS);
                     break;
                 }
                 case 2: {
-                    strcpy(view_buffer_key, "token hash");
+                    strcpy(view_buffer_key, "Token Hash");
                     ARRTOHEX(view_buffer_value, ctx.qrltx.txtoken.token_hash);
                     break;
                 }
                 default: {
                     elem_idx = (view_idx - 3) >> 2;
-                    if (elem_idx > QRLTX_SUBITEM_MAX) EXIT_VIEW();
-                    if (elem_idx > ctx.qrltx.subitem_count) EXIT_VIEW();
+                    if (elem_idx >= QRLTX_SUBITEM_MAX) EXIT_VIEW();
+                    if (elem_idx >= ctx.qrltx.subitem_count) EXIT_VIEW();
 
                     qrltx_addr_block *dst = &ctx.qrltx.txtoken.dst[elem_idx];
 
                     if (view_idx % 2 == 0) {
-                        snprintf(view_buffer_key, sizeof(view_buffer_key), "dst %d", elem_idx);
+                        snprintf(view_buffer_key, sizeof(view_buffer_key), "Dst %d", elem_idx);
                         ARRTOHEX(view_buffer_value, dst->address);
                     } else {
-                        snprintf(view_buffer_key, sizeof(view_buffer_key), "amount %d", elem_idx);
+                        snprintf(view_buffer_key, sizeof(view_buffer_key), "Amount %d (QRL)", elem_idx);
                         // TODO: Decide what to do with token decimals
                         AMOUNT_TO_STR(view_buffer_value, dst->amount, 0);
                     }
@@ -347,25 +354,27 @@ void view_txinfo_show() {
 
             switch (view_idx) {
                 case 0: {
-                    strcpy(view_buffer_key, "master addr");
+                    strcpy(view_buffer_key, "Master Addr");
                     ARRTOHEX(view_buffer_value, ctx.qrltx.slave.master.address);
                     break;
                 }
                 case 1: {
-                    strcpy(view_buffer_key, "fee (quanta)");
-                    AMOUNT_TO_STR(view_buffer_value, ctx.qrltx.slave.master.amount, QUANTA_DECIMALS);
+                    strcpy(view_buffer_key, "Fee (QRL)");
+                    AMOUNT_TO_STR(view_buffer_value,
+                                  ctx.qrltx.slave.master.amount,
+                                  QUANTA_DECIMALS);
                     break;
                 }
                 default: {
                     elem_idx = (view_idx - 2) >> 1;
-                    if (elem_idx > QRLTX_SUBITEM_MAX) EXIT_VIEW();
-                    if (elem_idx > ctx.qrltx.subitem_count) EXIT_VIEW();
+                    if (elem_idx >= QRLTX_SUBITEM_MAX) EXIT_VIEW();
+                    if (elem_idx >= ctx.qrltx.subitem_count) EXIT_VIEW();
 
                     if (view_idx % 2 == 0) {
-                        snprintf(view_buffer_key, sizeof(view_buffer_key), "slave pk %d", elem_idx);
+                        snprintf(view_buffer_key, sizeof(view_buffer_key), "Slave PK %d", elem_idx);
                         ARRTOHEX(view_buffer_value, ctx.qrltx.slave.slaves[elem_idx].pk);
                     } else {
-                        snprintf(view_buffer_key, sizeof(view_buffer_key), "access type %d", elem_idx);
+                        snprintf(view_buffer_key, sizeof(view_buffer_key), "Access Type %d", elem_idx);
                         ARRTOHEX(view_buffer_value, ctx.qrltx.slave.slaves[elem_idx].access);
                     }
                     break;
