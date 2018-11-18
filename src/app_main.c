@@ -28,6 +28,9 @@
 #include "libxmss/nvram.h"
 #include "storage.h"
 
+#include "test_data/test_data.h"
+
+
 #define CONDITIONAL_REDISPLAY  { if (UX_ALLOWED) UX_REDISPLAY() };
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
@@ -415,15 +418,6 @@ char app_initialize_xmss_step() {
     }
     appstorage_t tmp;
 
-#ifdef TESTING_ENABLED
-    // TODO: Set all leaves using pregenerated values for an empty seed
-    tmp.mode = APPMODE_READY;
-    tmp.xmss_index = 0;
-
-    nvm_write((void *) &N_appdata.raw, &tmp.raw, sizeof(tmp.raw));
-    return 0; // Keys are ready
-#else
-
     // Generate all leaves
     if (N_appdata.mode == APPMODE_NOT_INITIALIZED) {
         uint8_t
@@ -443,11 +437,21 @@ char app_initialize_xmss_step() {
         snprintf(view_buffer_value, sizeof(view_buffer_value), "keygen: %03d/256", N_appdata.xmss_index + 1);
         debug_printf(view_buffer_value);
 
+#ifdef TESTING_ENABLED
+        for (int idx  = 0; idx < 256; idx +=4){
+            nvm_write( (void *) (N_DATA.xmss_nodes + 32 * idx),
+                       (void *) test_xmss_leaves[idx],
+                       128);
+        }
+        tmp.mode = APPMODE_KEYGEN_RUNNING;
+        tmp.xmss_index = 256;
+#else
         const uint8_t *p = N_DATA.xmss_nodes + 32 * N_appdata.xmss_index;
         xmss_gen_keys_2_get_nodes((uint8_t * ) & N_DATA.wots_buffer, (void *) p, &N_DATA.sk, N_appdata.xmss_index);
-
         tmp.mode = APPMODE_KEYGEN_RUNNING;
         tmp.xmss_index = N_appdata.xmss_index + 1;
+#endif
+
     } else {
         snprintf(view_buffer_value, sizeof(view_buffer_value), "keygen: root");
         debug_printf(view_buffer_value);
@@ -465,9 +469,7 @@ char app_initialize_xmss_step() {
     }
 
     nvm_write((void *) &N_appdata.raw, &tmp.raw, sizeof(tmp.raw));
-
     return N_appdata.mode != APPMODE_READY;
-#endif
 }
 
 void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
@@ -517,11 +519,11 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     UNUSED(data);
 
     const uint8_t *msg = G_io_apdu_buffer + 5;
-    const qrltx_t *tx_p = msg;
+    const qrltx_t *tx_p = (qrltx_t *) msg;
 
     // Validate message size
-    const int16_t req_size = get_qrltx_size(tx_p);
-    if (req_size < 0 || req_size != rx) {
+    const int32_t req_size = get_qrltx_size(tx_p);
+    if (req_size < 0 || (uint32_t) req_size != rx) {
         THROW(APDU_CODE_DATA_INVALID);
     }
 
@@ -536,7 +538,7 @@ void hash_tx(uint8_t hashed_msg[32], const uint8_t msg[256]) {
     // TODO: get the tx from the ctx object and hash according to the corresponding rules
     // Get the length from get_qrltx_size
     // put the 32 bytes hash in msg
-    memset(msg, 0, 32);
+    memset((void *) msg, 0, 32);
 }
 
 /// This allows extracting the signature by chunks
