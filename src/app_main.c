@@ -502,17 +502,17 @@ void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
 
 /// Get the message to sign from the buffer
 bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
-    if (rx != 5 + 32) {
+    if (N_appdata.mode != APPMODE_READY) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
+
+    if (rx <= 5) {
         THROW(APDU_CODE_WRONG_LENGTH);
     }
 
     const uint8_t p1 = G_io_apdu_buffer[2];
     const uint8_t p2 = G_io_apdu_buffer[3];
     const uint8_t *data = G_io_apdu_buffer + 5;
-
-    if (N_appdata.mode != APPMODE_READY) {
-        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
-    }
 
     UNUSED(p1);
     UNUSED(p2);
@@ -523,7 +523,7 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
 
     // Validate message size
     const int32_t req_size = get_qrltx_size(tx_p);
-    if (req_size < 0 || (uint32_t) req_size != rx) {
+    if (req_size < 0 || (uint32_t) req_size != 5 + rx) {
         THROW(APDU_CODE_DATA_INVALID);
     }
 
@@ -576,6 +576,9 @@ void app_sign_next(volatile uint32_t *tx, uint32_t rx) {
     if (N_appdata.mode != APPMODE_READY) {
         THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
     }
+
+    // TODO: Check there is a signature available to be downloaded
+
     const uint8_t p1 = G_io_apdu_buffer[2];
     const uint8_t p2 = G_io_apdu_buffer[3];
     const uint8_t *data = G_io_apdu_buffer + 5;

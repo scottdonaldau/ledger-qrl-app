@@ -18,7 +18,6 @@
 
 #define PTR_DIST(p2, p1) (int16_t)(((int8_t *)(p2)) - ((int8_t *)(p1)))
 
-// TODO: Write unit tests
 int16_t get_qrltx_size(const qrltx_t *tx_p) {
     if (tx_p->subitem_count == 0) {
         return -1;
@@ -27,23 +26,26 @@ int16_t get_qrltx_size(const qrltx_t *tx_p) {
         return -1;
     }
 
+    uint16_t req_size = 1;
     // validate sizes
     switch (tx_p->type) {
         case QRLTX_TX: {
-            const uint16_t delta = PTR_DIST(&tx_p->tx.dst, tx_p);
-            const uint16_t req_size = delta + sizeof(qrltx_tx_t) * tx_p->subitem_count;
-            return req_size;
+            const int16_t delta = PTR_DIST(&tx_p->tx.dst, tx_p);
+            req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
+            break;
         }
         case QRLTX_TXTOKEN: {
-            const uint16_t delta = PTR_DIST(&tx_p->txtoken.dst, tx_p);
-            const uint16_t req_size = delta + sizeof(qrltx_txtoken_t) * tx_p->subitem_count;
-            return req_size;
+            const int16_t delta = PTR_DIST(&tx_p->txtoken.dst, tx_p);
+            req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
+            break;
         }
         case QRLTX_SLAVE: {
-            const uint16_t delta = PTR_DIST(&tx_p->slave.slaves, tx_p);
-            const uint16_t req_size = delta + sizeof(qrltx_slave_t) * tx_p->subitem_count;
-            return req_size;
+            const int16_t delta = PTR_DIST(&tx_p->slave.slaves, tx_p);
+            req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
+            break;
         }
+        default:
+            break;
     }
-    return -1;
+    return req_size;
 }
