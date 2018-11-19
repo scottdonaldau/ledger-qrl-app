@@ -21,6 +21,7 @@
 #define QRLTX_TX (0)
 #define QRLTX_TXTOKEN (1)
 #define QRLTX_SLAVE (2)
+#define QRLTX_MESSAGE (3)
 
 #pragma pack(push, 1)
 typedef struct {
@@ -54,6 +55,11 @@ typedef struct {
     qrltx_slave_block slaves[QRLTX_SUBITEM_MAX];            // TODO: extend to more
 } qrltx_slave_t;                                            // 176 bytes
 
+typedef struct {
+    qrltx_addr_block master;                                // 47
+    uint8_t message[80];                                    // 80
+} qrltx_msg_t;                                              // 127 bytes
+
 /////////////////////////////////////////
 
 typedef struct {
@@ -63,6 +69,7 @@ typedef struct {
         qrltx_tx_t tx;
         qrltx_txtoken_t txtoken;
         qrltx_slave_t slave;
+        qrltx_msg_t msg;
     };
 } qrltx_t;                                                  // 222 bytes
 #pragma pack(pop)

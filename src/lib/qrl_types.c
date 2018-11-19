@@ -44,6 +44,11 @@ int16_t get_qrltx_size(const qrltx_t *tx_p) {
             req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
             break;
         }
+        case QRLTX_MESSAGE: {
+            const int16_t delta = PTR_DIST(&tx_p->msg.message, tx_p);
+            req_size = delta + sizeof(tx_p->msg.message);
+            break;
+        }
         default:
             break;
     }

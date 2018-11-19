@@ -97,7 +97,7 @@ static const bagl_element_t view_txinfo[] = {
         UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
         UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
         // TODO: Reduce width to avoid pixel rubbish
-        UI_LabelLineScrolling(2, 0, 30, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
+        UI_LabelLineScrolling(2, 4, 30, 120, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
 };
 
 void io_seproxyhal_display(const bagl_element_t *element) {
@@ -372,6 +372,35 @@ void view_txinfo_show() {
                         ARRTOHEX(view_buffer_value, ctx.qrltx.slave.slaves[elem_idx].access);
                     }
                     break;
+                }
+            }
+            break;
+        }
+        case QRLTX_MESSAGE: {
+            strcpy(view_title, "MESSAGE");
+
+            switch (view_idx) {
+                case 0: {
+                    strcpy(view_buffer_key, "Source Addr");
+                    ARRTOHEX(view_buffer_value,
+                            ctx.qrltx.msg.master.address);
+                    break;
+                }
+                case 1: {
+                    strcpy(view_buffer_key, "Fee (QRL)");
+
+                    AMOUNT_TO_STR(view_buffer_value,
+                                  ctx.qrltx.msg.master.amount,
+                                  QUANTA_DECIMALS);
+                    break;
+                }
+                case 2: {
+                    strcpy(view_buffer_key, "Message");
+                    ARRTOHEX(view_buffer_value, ctx.qrltx.msg.message);
+                    break;
+                }
+                default: {
+                    EXIT_VIEW();
                 }
             }
             break;
