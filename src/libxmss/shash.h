@@ -78,7 +78,7 @@ __INLINE void dump_hex(const char *prefix, uint8_t *data, uint16_t size) {
     printf("%s %04d ", prefix, size);
     for (int i = 0; i < size; i++) {
         if (i % 32 == 0)
-            printf("|");
+            printf("\n");
         printf("%02X", *(data + i));
     }
     printf("\n");

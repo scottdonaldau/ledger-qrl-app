@@ -36,6 +36,9 @@
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 app_ctx_t ctx;
 
+bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx);
+void hash_tx(uint8_t msg[32]);
+
 unsigned char io_event(unsigned char channel) {
     switch (G_io_seproxyhal_spi_buffer[0]) {
         case SEPROXYHAL_TAG_FINGER_EVENT: //
@@ -126,6 +129,45 @@ void get_seed(uint8_t *seed) {
 #endif
 }
 
+/// Get the message to sign from the buffer
+bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
+    if (N_appdata.mode != APPMODE_READY) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
+
+    if (rx <= 5) {
+        THROW(APDU_CODE_WRONG_LENGTH);
+    }
+
+    const uint8_t p1 = G_io_apdu_buffer[2];
+    const uint8_t p2 = G_io_apdu_buffer[3];
+    const uint8_t *data = G_io_apdu_buffer + 5;
+
+    UNUSED(p1);
+    UNUSED(p2);
+    UNUSED(data);
+
+    const uint8_t *msg = G_io_apdu_buffer + 5;
+    const qrltx_t *tx_p = (qrltx_t *) msg;
+
+    // Validate message size
+    const int32_t req_size = get_qrltx_size(tx_p);
+    if (req_size < 0 || (uint32_t) req_size + 5 != rx) {
+        THROW(APDU_CODE_DATA_INVALID);
+    }
+
+    // move the buffer to the tx ctx
+    memcpy((uint8_t * ) & ctx.qrltx, msg, rx);
+
+    return true;
+}
+
+void hash_tx(uint8_t msg[32])
+{
+    // Hash tx in ctx object
+    const int32_t in_len = get_qrltx_size(&ctx.qrltx);
+    __sha256(msg, (uint8_t * ) & ctx.qrltx, in_len);
+}
 
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
@@ -291,40 +333,6 @@ void test_read_leaf(volatile uint32_t *tx, uint32_t rx)
     view_update_state(2000);
 }
 
-void test_digest(volatile uint32_t *tx, uint32_t rx)
-{
-    if (rx!=5+32)
-    {
-        THROW(APDU_CODE_WRONG_LENGTH);
-    }
-    const uint8_t p1 = G_io_apdu_buffer[2];
-    const uint8_t p2 = G_io_apdu_buffer[3];
-    const uint8_t *data = G_io_apdu_buffer+5;
-
-    UNUSED(p1);
-    UNUSED(p2);
-    UNUSED(data);
-
-    uint8_t seed[48];
-    get_seed(seed);
-
-    xmss_gen_keys_1_get_seeds(&N_DATA.sk, seed);
-
-    xmss_digest_t digest;
-    memset(digest.raw, 0, XMSS_DIGESTSIZE);
-
-    const uint8_t index = p1;
-    xmss_digest(&digest, data, &N_DATA.sk, index);
-
-    snprintf(view_buffer_value, sizeof(view_buffer_value), "Digest idx %d", index+1);
-    debug_printf(view_buffer_value);
-
-    os_memmove(G_io_apdu_buffer, digest.raw, 64);
-
-    *tx+=64;
-    view_update_state(2000);
-}
-
 void test_get_seed(volatile uint32_t *tx, uint32_t rx)
 {
     if (rx<5)
@@ -351,6 +359,42 @@ void test_get_seed(volatile uint32_t *tx, uint32_t rx)
     debug_printf(view_buffer_value);
 
     view_update_state(500);
+}
+
+void test_digest(volatile uint32_t *tx, uint32_t rx)
+{
+    if (!parse_unsigned_message(tx, rx)){
+        THROW(APDU_CODE_WRONG_LENGTH);
+    }
+
+    const uint8_t p1 = G_io_apdu_buffer[2];
+    const uint8_t p2 = G_io_apdu_buffer[3];
+    const uint8_t *data = G_io_apdu_buffer+5;
+    UNUSED(p1);
+    UNUSED(p2);
+    UNUSED(data);
+
+    uint8_t msg[32];
+    hash_tx(msg);
+
+    uint8_t seed[48];
+    get_seed(seed);
+
+    xmss_gen_keys_1_get_seeds(&N_DATA.sk, seed);
+
+    xmss_digest_t digest;
+    memset(digest.raw, 0, XMSS_DIGESTSIZE);
+
+    const uint8_t index = p1;
+    xmss_digest(&digest, msg, &N_DATA.sk, index);
+
+    snprintf(view_buffer_value, sizeof(view_buffer_value), "Digest idx %d", index+1);
+    debug_printf(view_buffer_value);
+
+    os_memmove(G_io_apdu_buffer, digest.raw, 64);
+
+    *tx+=64;
+    view_update_state(2000);
 }
 #endif
 
@@ -502,55 +546,12 @@ void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
     view_update_state(500);
 }
 
-/// Get the message to sign from the buffer
-bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
-    if (N_appdata.mode != APPMODE_READY) {
-        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
-    }
-
-    if (rx <= 5) {
-        THROW(APDU_CODE_WRONG_LENGTH);
-    }
-
-    const uint8_t p1 = G_io_apdu_buffer[2];
-    const uint8_t p2 = G_io_apdu_buffer[3];
-    const uint8_t *data = G_io_apdu_buffer + 5;
-
-    UNUSED(p1);
-    UNUSED(p2);
-    UNUSED(data);
-
-    const uint8_t *msg = G_io_apdu_buffer + 5;
-    const qrltx_t *tx_p = (qrltx_t *) msg;
-
-    // Validate message size
-    const int32_t req_size = get_qrltx_size(tx_p);
-    if (req_size < 0 || (uint32_t) req_size + 5 != rx) {
-        THROW(APDU_CODE_DATA_INVALID);
-    }
-
-    // move the buffer to the tx ctx
-    memcpy((uint8_t * ) & ctx.qrltx, msg, rx);
-
-    return true;
-}
-
-/// Hash the tx obj with SHA256 as the QRL node does
-void hash_tx(uint8_t hashed_msg[32], const uint8_t msg[256]) {
-    // TODO: get the tx from the ctx object and hash according to the corresponding rules
-    // Get the length from get_qrltx_size
-    // put the 32 bytes hash in msg
-    memset((void *) msg, 0, 32);
-}
-
 /// This allows extracting the signature by chunks
 void app_sign(volatile uint32_t *tx, uint32_t rx) {
     uint8_t
     msg[32];        // Used to store the tx hash
 
-    // TODO: hash the tx ctx before it is destroyed by xmss_sign_incremental_init
-
-    // hash_tx((void*) N_appdata.unsigned_message, msg)
+    hash_tx(msg);
 
     // buffer[2..3] are ignored (p1, p2)
     xmss_sign_incremental_init(
@@ -591,20 +592,17 @@ void app_sign_next(volatile uint32_t *tx, uint32_t rx) {
 
     const uint16_t index = N_appdata.xmss_index - 1;      // It has already been updated
 
-    if (ctx.xmss_sig_ctx.sig_chunk_idx < 10)
-        xmss_sign_incremental(&ctx.xmss_sig_ctx, G_io_apdu_buffer, &N_DATA.sk, index);
-    else
+    if (ctx.xmss_sig_ctx.sig_chunk_idx == 10) {
         xmss_sign_incremental_last(&ctx.xmss_sig_ctx, G_io_apdu_buffer, &N_DATA.sk, index);
+    } else {
+        xmss_sign_incremental(&ctx.xmss_sig_ctx, G_io_apdu_buffer, &N_DATA.sk, index);
+    }
 
     if (ctx.xmss_sig_ctx.written > 0) {
         *tx = ctx.xmss_sig_ctx.written;
     }
 
-    if (ctx.xmss_sig_ctx.sig_chunk_idx == 10) {
-        view_update_state(1000);
-    }
-
-    view_update_state(500);
+    view_update_state(1000);
 }
 
 #pragma clang diagnostic push

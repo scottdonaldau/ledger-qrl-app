@@ -9,7 +9,10 @@ __INLINE uint8_t *get_p(NVCONST uint8_t *tmp_wotspk, uint8_t *mem_wotspk, uint32
     return base_p + WOTS_N * idx;
 }
 
-void xmss_ltree_gen(NVCONST uint8_t *leaf, NVCONST uint8_t *tmp_wotspk, const uint8_t *pub_seed, uint16_t index) {
+void xmss_ltree_gen(NVCONST uint8_t *leaf,
+                    NVCONST uint8_t *tmp_wotspk,
+                    const uint8_t *pub_seed,
+                    uint16_t index) {
     uint8_t mem_wotspk[BUF_MAX_IDX * WOTS_N];
     memcpy(mem_wotspk, tmp_wotspk, BUF_MAX_IDX * WOTS_N);
 
@@ -51,12 +54,11 @@ void xmss_ltree_gen(NVCONST uint8_t *leaf, NVCONST uint8_t *tmp_wotspk, const ui
     nvcpy(leaf, mem_wotspk, WOTS_N);
 }
 
-void xmss_treehash(
-    uint8_t *root_out,
-    uint8_t *authpath,
-    const uint8_t *nodes,
-    const uint8_t *pub_seed,
-    const uint16_t leaf_index) {
+void xmss_treehash(uint8_t *root_out,
+                   uint8_t *authpath,
+                   const uint8_t *nodes,
+                   const uint8_t *pub_seed,
+                   const uint16_t leaf_index) {
     hashh_t h_in;
     uint8_t stack[XMSS_STK_SIZE];
     uint16_t stack_levels[XMSS_STK_LEVELS];
@@ -118,30 +120,32 @@ void xmss_get_seed_i(uint8_t *seed, const xmss_sk_t *sk, uint16_t idx) {
     shash96(seed, &prf_in);
 }
 
-void xmss_gen_keys_1_get_seeds(NVCONST xmss_sk_t *sk, const uint8_t *sk_seed) {
+void xmss_gen_keys_1_get_seeds(NVCONST xmss_sk_t *sk,
+                               const uint8_t *sk_seed) {
     nvset(&sk->index, 0);
     xmss_randombits(sk->seeds.raw, sk_seed);
 }
 
-void xmss_gen_keys_2_get_nodes(
-    NVCONST uint8_t *wots_buffer,
-    NVCONST uint8_t *xmss_node,
-    const xmss_sk_t *sk,
-    uint16_t idx) {
+void xmss_gen_keys_2_get_nodes(NVCONST uint8_t *wots_buffer,
+                               NVCONST uint8_t *xmss_node,
+                               const xmss_sk_t *sk,
+                               uint16_t idx) {
     uint8_t seed[WOTS_N];
     xmss_get_seed_i(seed, sk, idx);
     wotsp_gen_pk(wots_buffer, seed, sk->pub_seed, idx);
     xmss_ltree_gen(xmss_node, wots_buffer, sk->pub_seed, idx);
 }
 
-void xmss_gen_keys_3_get_root(const uint8_t *xmss_nodes, NVCONST xmss_sk_t *sk) {
+void xmss_gen_keys_3_get_root(const uint8_t *xmss_nodes,
+                              NVCONST xmss_sk_t *sk) {
     uint8_t root[WOTS_N];
     uint8_t authpath[(XMSS_H + 1) * WOTS_N];
     xmss_treehash(root, authpath, xmss_nodes, sk->pub_seed, 0);
     nvcpy(sk->root, root, WOTS_N);
 }
 
-void xmss_gen_keys(xmss_sk_t *sk, const uint8_t *sk_seed) {
+void xmss_gen_keys(xmss_sk_t *sk,
+                   const uint8_t *sk_seed) {
     xmss_gen_keys_1_get_seeds(sk, sk_seed);
 
     uint8_t xmss_nodes[XMSS_NODES_BUFSIZE];
@@ -149,19 +153,18 @@ void xmss_gen_keys(xmss_sk_t *sk, const uint8_t *sk_seed) {
         uint8_t wots_buffer[WOTS_LEN * WOTS_N];
 
         xmss_gen_keys_2_get_nodes(
-            wots_buffer,
-            xmss_nodes + idx * WOTS_N,
-            sk, idx);
+                wots_buffer,
+                xmss_nodes + idx * WOTS_N,
+                sk, idx);
     }
 
     xmss_gen_keys_3_get_root(xmss_nodes, sk);
 }
 
-void xmss_digest(
-    xmss_digest_t *digest,
-    const uint8_t msg[32],
-    const xmss_sk_t *sk,
-    const uint16_t index) {
+void xmss_digest(xmss_digest_t *digest,
+                 const uint8_t msg[32],
+                 const xmss_sk_t *sk,
+                 const uint16_t index) {
     // get randomness
     shash_input_t prf_in;
     PRF_init(&prf_in, SHASH_TYPE_PRF);
@@ -180,12 +183,11 @@ void xmss_digest(
     shash160(digest->hash, &h_in);
 }
 
-void xmss_sign(
-    xmss_signature_t *sig,
-    const uint8_t msg[32],
-    const xmss_sk_t *sk,
-    const uint8_t xmss_nodes[XMSS_NODES_BUFSIZE],
-    const uint16_t index) {
+void xmss_sign(xmss_signature_t *sig,
+               const uint8_t msg[32],
+               const xmss_sk_t *sk,
+               const uint8_t xmss_nodes[XMSS_NODES_BUFSIZE],
+               const uint16_t index) {
     // Get message digest
     xmss_digest_t msg_digest;
     xmss_digest(&msg_digest, msg, sk, index);
@@ -197,11 +199,11 @@ void xmss_sign(
     // The following is a trick to reuse and save RAM
     uint8_t dummy_root[32];
     xmss_treehash(
-        dummy_root,
-        sig->auth_path,
-        xmss_nodes,
-        sk->pub_seed,
-        index);
+            dummy_root,
+            sig->auth_path,
+            xmss_nodes,
+            sk->pub_seed,
+            index);
 
     // The following is a trick to reuse and save RAM
     uint8_t seed_i[32];
@@ -214,12 +216,11 @@ void xmss_sign(
                index);
 }
 
-void xmss_sign_incremental_init(
-    xmss_sig_ctx_t *ctx,
-    const uint8_t msg[32],
-    const xmss_sk_t *sk,
-    uint8_t xmss_nodes[XMSS_NODES_BUFSIZE],
-    const uint16_t index) {
+void xmss_sign_incremental_init(xmss_sig_ctx_t *ctx,
+                                const uint8_t msg[32],
+                                const xmss_sk_t *sk,
+                                uint8_t xmss_nodes[XMSS_NODES_BUFSIZE],
+                                const uint16_t index) {
     ctx->sig_chunk_idx = 0;
     ctx->written = 0;
     xmss_digest(&ctx->msg_digest, msg, sk, index);
@@ -229,17 +230,16 @@ void xmss_sign_incremental_init(
     xmss_get_seed_i(seed_i, sk, index);
 
     wotsp_sign_init_ctx(
-        &ctx->wots_ctx,
-        sk->pub_seed,
-        seed_i,
-        index);
+            &ctx->wots_ctx,
+            sk->pub_seed,
+            seed_i,
+            index);
 }
 
-bool xmss_sign_incremental(
-    xmss_sig_ctx_t *ctx,
-    uint8_t *out,
-    const xmss_sk_t *sk,
-    const uint16_t index) {
+bool xmss_sign_incremental(xmss_sig_ctx_t *ctx,
+                           uint8_t *out,
+                           const xmss_sk_t *sk,
+                           const uint16_t index) {
     ctx->written = 0;
 
     if (ctx->sig_chunk_idx > 9) {
@@ -277,11 +277,10 @@ bool xmss_sign_incremental(
     return false;
 }
 
-bool xmss_sign_incremental_last(
-    xmss_sig_ctx_t *ctx,
-    uint8_t *out,
-    const xmss_sk_t *sk,
-    const uint16_t index) {
+bool xmss_sign_incremental_last(xmss_sig_ctx_t *ctx,
+                                uint8_t *out,
+                                const xmss_sk_t *sk,
+                                const uint16_t index) {
     ctx->written = 0;
 
     if (ctx->sig_chunk_idx != 10) {
@@ -291,12 +290,12 @@ bool xmss_sign_incremental_last(
     // Last block is the authpath
     uint8_t dummy_root[32];
     xmss_treehash(
-        dummy_root,
-        out,
-        ctx->xmss_nodes,
-        sk->pub_seed,
-        index);
-    ctx->written += 8 * 32;
+            dummy_root,
+            out,
+            ctx->xmss_nodes,
+            sk->pub_seed,
+            index);
+    ctx->written += 7 * 32;
     ctx->sig_chunk_idx++;
     return true;
 }

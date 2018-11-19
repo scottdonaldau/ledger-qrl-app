@@ -261,9 +261,6 @@ void view_txinfo_show() {
         EXIT_VIEW();
     }
 
-    // TODO: Call get_qrltx_size to verify that the amount of received bytes matches the description
-
-    // TODO: Validate TX minimum SIZES
     uint8_t
     elem_idx = 0;
 
