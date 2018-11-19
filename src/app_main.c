@@ -382,12 +382,14 @@ void app_get_version(volatile uint32_t *tx, uint32_t rx) {
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
     *tx += 4;
 
+#ifdef TESTING_ENABLED
     snprintf(view_buffer_value, sizeof(view_buffer_value),
              ver_str,
              LEDGER_MAJOR_VERSION,
              LEDGER_MINOR_VERSION,
              LEDGER_PATCH_VERSION);
     debug_printf(view_buffer_value);
+#endif
 
     view_update_state(2000);
 }
