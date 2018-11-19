@@ -22,7 +22,6 @@
 #include "storage.h"
 #include "view_templates.h"
 #include "app_types.h"
-#include <zxio.h>
 
 ux_state_t ux;
 enum UI_STATE view_uiState;
@@ -282,11 +281,9 @@ void view_txinfo_show() {
                 case 1: {
                     strcpy(view_buffer_key, "Fee (QRL)");
 
-                    ARRTOHEX(view_buffer_value, ctx.qrltx.tx.master.amount);
-
-//                    AMOUNT_TO_STR(view_buffer_value,
-//                                  ctx.qrltx.tx.master.amount,
-//                                  QUANTA_DECIMALS);
+                    AMOUNT_TO_STR(view_buffer_value,
+                                  ctx.qrltx.tx.master.amount,
+                                  QUANTA_DECIMALS);
                     break;
                 }
                 default: {
