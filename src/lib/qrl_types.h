@@ -41,18 +41,18 @@ typedef struct {
 
 typedef struct {
     qrltx_addr_block master;                                // 47
-    qrltx_addr_block dst[QRLTX_SUBITEM_MAX];                // TODO: extend to more
+    qrltx_addr_block dst[QRLTX_SUBITEM_MAX];
 } qrltx_tx_t;                                               // 188 bytes
 
 typedef struct {
     qrltx_addr_block master;                                // 47
     uint8_t token_hash[32];                                 // 32
-    qrltx_addr_block dst[QRLTX_SUBITEM_MAX];                // TODO: extend to more
+    qrltx_addr_block dst[QRLTX_SUBITEM_MAX];
 } qrltx_txtoken_t;                                          // 220 bytes
 
 typedef struct {
     qrltx_addr_block master;                                // 47
-    qrltx_slave_block slaves[QRLTX_SUBITEM_MAX];            // TODO: extend to more
+    qrltx_slave_block slaves[QRLTX_SUBITEM_MAX];
 } qrltx_slave_t;                                            // 176 bytes
 
 typedef struct {

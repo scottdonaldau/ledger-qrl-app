@@ -251,15 +251,8 @@ void view_update_state(uint16_t interval) {
 }
 
 void view_txinfo_show() {
-    // TODO: maybe decouple this to make it testable
-
 #define EXIT_VIEW() {view_sign_menu(); return;}
 #define PTR_DIST(p2, p1) ((char *)p2) - ((char *)p1)
-
-    if (view_idx < 0 || view_idx > 50) {
-        // TODO: Check bounds, 50?
-        EXIT_VIEW();
-    }
 
     uint8_t
     elem_idx = 0;
@@ -405,7 +398,8 @@ void view_txinfo_show() {
             }
             break;
         }
-
+        default:
+            EXIT_VIEW()
     }
 
     UX_DISPLAY(view_txinfo, view_txinfo_prepro);
