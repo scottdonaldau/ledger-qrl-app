@@ -97,7 +97,7 @@ static const bagl_element_t view_txinfo[] = {
         UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
         UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
         // TODO: Reduce width to avoid pixel rubbish
-        UI_LabelLineScrolling(2, 4, 30, 120, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
+        UI_LabelLineScrolling(2, 6, 30, 112, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
 };
 
 void io_seproxyhal_display(const bagl_element_t *element) {
