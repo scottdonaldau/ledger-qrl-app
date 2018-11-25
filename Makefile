@@ -103,13 +103,13 @@ SDK_SOURCE_PATH += lib_stusb lib_u2f lib_stusb_impl
 
 all: default
 
-load:
+load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
 
-delete:
+delete: all
 	python -m ledgerblue.deleteApp $(COMMON_DELETE_PARAMS)
 
-package:
+package: all
 	./pkgdemo.sh ${APPNAME} ${APPVERSION} ${ICONNAME}
 
 
