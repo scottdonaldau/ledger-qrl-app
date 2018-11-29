@@ -37,6 +37,7 @@ unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 app_ctx_t ctx;
 
 bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx);
+
 void hash_tx(uint8_t msg[32]);
 
 unsigned char io_event(unsigned char channel) {
@@ -162,11 +163,10 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     return true;
 }
 
-void hash_tx(uint8_t msg[32])
-{
+void hash_tx(uint8_t msg[32]) {
     // Hash tx in ctx object
     const int32_t in_len = get_qrltx_size(&ctx.qrltx);
-    __sha256(msg, (uint8_t * ) & ctx.qrltx, in_len);
+    __sha256(msg, ((uint8_t * ) & ctx.qrltx) + 2, in_len - 2);
 }
 
 ////////////////////////////////////////////////
