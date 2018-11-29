@@ -265,7 +265,8 @@ void view_txinfo_show() {
             switch (view_idx) {
                 case 0: {
                     strcpy(view_buffer_key, "Source Addr");
-                    ARRTOHEX(view_buffer_value, ctx.qrltx.tx.master.address);
+                    view_buffer_value[0] = 'Q';
+                    ARRTOHEX(view_buffer_value + 1, ctx.qrltx.tx.master.address);
                     break;
                 }
                 case 1: {
@@ -285,7 +286,8 @@ void view_txinfo_show() {
 
                     if (view_idx % 2 == 0) {
                         snprintf(view_buffer_key, sizeof(view_buffer_key), "Dst %d", elem_idx);
-                        ARRTOHEX(view_buffer_value, dst->address);
+                        view_buffer_value[0] = 'Q';
+                        ARRTOHEX(view_buffer_value + 1, dst->address);
                     } else {
                         snprintf(view_buffer_key, sizeof(view_buffer_key), "Amount %d (QRL)", elem_idx);
                         AMOUNT_TO_STR(view_buffer_value, dst->amount, QUANTA_DECIMALS);
@@ -301,7 +303,8 @@ void view_txinfo_show() {
             switch (view_idx) {
                 case 0: {
                     strcpy(view_buffer_key, "Source Addr");
-                    ARRTOHEX(view_buffer_value, ctx.qrltx.txtoken.master.address);
+                    view_buffer_value[0] = 'Q';
+                    ARRTOHEX(view_buffer_value + 1, ctx.qrltx.txtoken.master.address);
                     break;
                 }
                 case 1: {
@@ -325,7 +328,8 @@ void view_txinfo_show() {
 
                     if (view_idx % 2 == 0) {
                         snprintf(view_buffer_key, sizeof(view_buffer_key), "Dst %d", elem_idx);
-                        ARRTOHEX(view_buffer_value, dst->address);
+                        view_buffer_value[0] = 'Q';
+                        ARRTOHEX(view_buffer_value + 1, dst->address);
                     } else {
                         snprintf(view_buffer_key, sizeof(view_buffer_key), "Amount %d (QRL)", elem_idx);
                         // TODO: Decide what to do with token decimals
@@ -342,7 +346,8 @@ void view_txinfo_show() {
             switch (view_idx) {
                 case 0: {
                     strcpy(view_buffer_key, "Master Addr");
-                    ARRTOHEX(view_buffer_value, ctx.qrltx.slave.master.address);
+                    view_buffer_value[0] = 'Q';
+                    ARRTOHEX(view_buffer_value + 1, ctx.qrltx.slave.master.address);
                     break;
                 }
                 case 1: {
@@ -375,8 +380,9 @@ void view_txinfo_show() {
             switch (view_idx) {
                 case 0: {
                     strcpy(view_buffer_key, "Source Addr");
-                    ARRTOHEX(view_buffer_value,
-                            ctx.qrltx.msg.master.address);
+                    view_buffer_value[0] = 'Q';
+                    ARRTOHEX(view_buffer_value + 1,
+                             ctx.qrltx.msg.master.address);
                     break;
                 }
                 case 1: {
@@ -398,8 +404,7 @@ void view_txinfo_show() {
             }
             break;
         }
-        default:
-            EXIT_VIEW()
+        default: EXIT_VIEW()
     }
 
     UX_DISPLAY(view_txinfo, view_txinfo_prepro);
