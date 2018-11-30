@@ -14,6 +14,7 @@
 *  limitations under the License.
 ********************************************************************************/
 
+#include <shash.h>
 #include "qrl_types.h"
 
 #define PTR_DIST(p2, p1) (int16_t)(((int8_t *)(p2)) - ((int8_t *)(p1)))
@@ -53,4 +54,21 @@ int16_t get_qrltx_size(const qrltx_t *tx_p) {
             break;
     }
     return req_size;
+}
+
+int8_t get_qrltx_hash(const qrltx_t *tx_p, uint8_t hash[32]) {
+    int16_t in_len = get_qrltx_size(tx_p);
+
+    if (in_len <= 0)
+        return -1;
+
+    uint8_t *p = ((uint8_t *) tx_p);
+
+    // skip metadata and source address
+    p += 2 + 39;
+    in_len -= 2 + 39;
+
+    __sha256(hash, p, (uint16_t) in_len);
+
+    return 0;
 }

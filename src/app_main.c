@@ -163,16 +163,11 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     return true;
 }
 
-void hash_tx(uint8_t msg[32]) {
-    // Hash tx in ctx object
-    int32_t in_len = get_qrltx_size(&ctx.qrltx);
-    uint8_t *p = ((uint8_t * ) & ctx.qrltx);
-
-    // skip metadata and source address
-    p += 2 + 39;
-    in_len -= 2 + 39;
-
-    __sha256(msg, p, in_len);
+void hash_tx(uint8_t hash[32]) {
+    const int8_t ret = get_qrltx_hash(&ctx.qrltx, hash);
+    if (ret < 0) {
+        THROW(APDU_CODE_DATA_INVALID);
+    }
 }
 
 ////////////////////////////////////////////////

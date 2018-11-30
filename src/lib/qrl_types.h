@@ -75,3 +75,4 @@ typedef struct {
 #pragma pack(pop)
 
 int16_t get_qrltx_size(const qrltx_t *tx_p);
+int8_t get_qrltx_hash(const qrltx_t *tx_p, uint8_t hash[32]);
