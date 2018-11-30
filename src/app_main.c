@@ -165,8 +165,14 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
 
 void hash_tx(uint8_t msg[32]) {
     // Hash tx in ctx object
-    const int32_t in_len = get_qrltx_size(&ctx.qrltx);
-    __sha256(msg, ((uint8_t * ) & ctx.qrltx) + 2, in_len - 2);
+    int32_t in_len = get_qrltx_size(&ctx.qrltx);
+    uint8_t *p = ((uint8_t * ) & ctx.qrltx);
+
+    // skip metadata and source address
+    p += 2 + 39;
+    in_len -= 2 + 39;
+
+    __sha256(msg, p, in_len);
 }
 
 ////////////////////////////////////////////////
