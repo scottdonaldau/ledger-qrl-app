@@ -48,7 +48,7 @@ typedef union {
     uint32_t index;
     uint8_t randomness[32];
     uint8_t wots_sig[32 * 67];
-    uint8_t auth_path[32 * (XMSS_H - 1)];
+    uint8_t auth_path[32 * XMSS_H];
   };
 } xmss_signature_t;
 

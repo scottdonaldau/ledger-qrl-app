@@ -249,7 +249,7 @@ bool xmss_sign_incremental(xmss_sig_ctx_t *ctx,
     // Incremental signature must be divided in 11 chunks
     //  4 + 32 ( 1 + 4 )             164     C=0
     //      32   7              N=9  224     C=1..9
-    //      32   7                   224     C=10
+    //      32   8                   224     C=10
     // Fill the buffer according to this structure
     // and return true when the signature is complete
 
@@ -262,7 +262,7 @@ bool xmss_sign_incremental(xmss_sig_ctx_t *ctx,
         ctx->written += 4;
 
         memcpy(out + ctx->written, ctx->msg_digest.randomness, 32);
-        ctx->written += 32;
+        ctx->written += XMSS_N;
 
         wots_steps = 4;
     }
@@ -270,7 +270,7 @@ bool xmss_sign_incremental(xmss_sig_ctx_t *ctx,
     // Normal steps add 7 wots steps
     for (int i = 0; i < wots_steps; i++) {
         wotsp_sign_step(&ctx->wots_ctx, out + ctx->written, ctx->msg_digest.hash);
-        ctx->written += 32;
+        ctx->written += XMSS_N;
     }
 
     ctx->sig_chunk_idx++;
@@ -295,7 +295,7 @@ bool xmss_sign_incremental_last(xmss_sig_ctx_t *ctx,
             ctx->xmss_nodes,
             sk->pub_seed,
             index);
-    ctx->written += 7 * 32;
+    ctx->written += XMSS_H * XMSS_N;
     ctx->sig_chunk_idx++;
     return true;
 }
