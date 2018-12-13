@@ -106,13 +106,6 @@ void get_seed(uint8_t *seed) {
     // Set the zero to all zeros for reproducible tests
     memset(seed, 0, 48);
 #else
-    // TODO: Leon should review this
-    // based on RFC8032, the private key is 32 octets (256 bits, corresponding to b) of
-    // cryptographically secure random data.
-    // To ensure higher entropy, we take 128 octets from 4 private keys
-    uint8_t
-    privateKeyData[128];
-
     uint32_t bip32_path[5] = {
             0x80000000 | 44,
             0x80000000 | 238,
@@ -121,12 +114,23 @@ void get_seed(uint8_t *seed) {
             0x80000000 | 0
     };
 
-    for (int i = 0; i < 4; i++) {
-        bip32_path[4] = i;
-        os_perso_derive_node_bip32(CX_CURVE_Ed25519, bip32_path, 5, privateKeyData + (32 * i), NULL);
-    }
+    union {
+        struct {
+            unsigned char seed[32];
+            unsigned char chain[32];
+        };
+        unsigned char all[32];
+    } u;
 
-    shake256(seed, 48, privateKeyData, 128)
+    os_memset(u.seed, 0, sizeof(u.seed));
+    os_memset(u.chain, 0, sizeof(u.chain));
+
+    os_perso_derive_node_bip32(CX_CURVE_SECP256K1, bip32_path, 5, u.seed, u.chain);
+
+    cx_sha3_t sha3_xof;
+    cx_sha3_xof_init(&sha3_xof, 512, 48);
+
+    cx_hash(&sha3_xof, CX_LAST, u.all, sizeof(u.all), seed, 48);
 #endif
 }
 
@@ -416,18 +420,18 @@ void app_get_version(volatile uint32_t *tx, uint32_t rx) {
     UNUSED(data);
 
 #ifdef TESTING_ENABLED
-    const char *ver_str = "Ver %02d.%02d.%02d TEST";
     G_io_apdu_buffer[0] = 0xFF;
 #else
-    const char *ver_str = "Ver %02d.%02d.%02d";
     G_io_apdu_buffer[0] = 0;
 #endif
+
     G_io_apdu_buffer[1] = LEDGER_MAJOR_VERSION;
     G_io_apdu_buffer[2] = LEDGER_MINOR_VERSION;
     G_io_apdu_buffer[3] = LEDGER_PATCH_VERSION;
     *tx += 4;
 
 #ifdef TESTING_ENABLED
+    const char *ver_str = "Ver %02d.%02d.%02d TEST";
     snprintf(view_buffer_value, sizeof(view_buffer_value),
              ver_str,
              LEDGER_MAJOR_VERSION,
