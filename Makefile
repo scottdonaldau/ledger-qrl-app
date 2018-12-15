@@ -63,6 +63,7 @@ DEFINES   += LEDGER_SPECIFIC
 
 #Feature temporarily disabled
 DEFINES   += TESTING_ENABLED
+#DEFINES   += TXTOKEN_ENABLED
 
 # Compiler, assembler, and linker
 

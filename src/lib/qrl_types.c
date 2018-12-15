@@ -35,11 +35,13 @@ int16_t get_qrltx_size(const qrltx_t *tx_p) {
             req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
             break;
         }
+#ifdef TXTOKEN_ENABLED
         case QRLTX_TXTOKEN: {
             const int16_t delta = PTR_DIST(&tx_p->txtoken.dst, tx_p);
             req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
             break;
         }
+#endif
         case QRLTX_SLAVE: {
             const int16_t delta = PTR_DIST(&tx_p->slave.slaves, tx_p);
             req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;

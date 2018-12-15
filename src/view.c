@@ -297,6 +297,7 @@ void view_txinfo_show() {
             }
             break;
         }
+#ifdef TXTOKEN_ENABLED
         case QRLTX_TXTOKEN: {
             strcpy(view_title, "TRANSFER TOKEN");
 
@@ -340,6 +341,7 @@ void view_txinfo_show() {
             }
             break;
         }
+#endif
         case QRLTX_SLAVE: {
             strcpy(view_title, "CREATE SLAVE");
 
