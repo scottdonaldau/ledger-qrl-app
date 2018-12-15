@@ -36,8 +36,14 @@ extern enum UI_STATE view_uiState;
 void view_init(void);
 void view_main_menu(void);
 void view_sign_menu(void);
+void view_txinfo_show();
+void view_setidx_show();
+
 void view_update_state(uint16_t interval);
 
 void handler_view_tx(unsigned int unused);
 void handler_sign_tx(unsigned int unused);
 void handler_reject_tx(unsigned int unused);
+void handler_init_device(unsigned int);
+void handler_main_menu_select(unsigned int);
+

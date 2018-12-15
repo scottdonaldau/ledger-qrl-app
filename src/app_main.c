@@ -30,7 +30,6 @@
 
 #include "test_data/test_data.h"
 
-
 #define CONDITIONAL_REDISPLAY  { if (UX_ALLOWED) UX_REDISPLAY() };
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
@@ -61,9 +60,10 @@ unsigned char io_event(unsigned char channel) {
             break;
 
             // unknown events are acknowledged
-        default:
+        default:{
             UX_DEFAULT_EVENT();
             break;
+        }
     }
     if (!io_seproxyhal_spi_is_status_sent()) {
         io_seproxyhal_general_status();
@@ -73,11 +73,12 @@ unsigned char io_event(unsigned char channel) {
 
 unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     switch (channel & ~(IO_FLAGS)) {
-        case CHANNEL_KEYBOARD:
+        case CHANNEL_KEYBOARD:{
             break;
+        }
 
             // multiplexed io exchange over a SPI channel and TLV encapsulated protocol
-        case CHANNEL_SPI:
+        case CHANNEL_SPI: {
             if (tx_len) {
                 io_seproxyhal_spi_send(G_io_apdu_buffer, tx_len);
 
@@ -90,9 +91,11 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
                 return io_seproxyhal_spi_recv(G_io_apdu_buffer,
                                               sizeof(G_io_apdu_buffer), 0);
             }
+        }
 
-        default:
+        default:{
             THROW(INVALID_PARAMETER);
+        }
     }
     return 0;
 }
@@ -107,11 +110,11 @@ void get_seed(uint8_t *seed) {
     memset(seed, 0, 48);
 #else
     uint32_t bip32_path[5] = {
-            0x80000000 | 44,
-            0x80000000 | 238,
-            0x80000000 | 0,
-            0x80000000 | 0,
-            0x80000000 | 0
+        0x80000000 | 44,
+        0x80000000 | 238,
+        0x80000000 | 0,
+        0x80000000 | 0,
+        0x80000000 | 0
     };
 
     union {
@@ -162,7 +165,7 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     }
 
     // move the buffer to the tx ctx
-    memcpy((uint8_t * ) & ctx.qrltx, msg, rx);
+    memcpy((uint8_t *) &ctx.qrltx, msg, rx);
 
     return true;
 }
@@ -471,8 +474,7 @@ char app_initialize_xmss_step() {
 
     // Generate all leaves
     if (N_appdata.mode == APPMODE_NOT_INITIALIZED) {
-        uint8_t
-        seed[48];
+        uint8_t seed[48];
 
         get_seed(seed);
 
@@ -498,7 +500,7 @@ char app_initialize_xmss_step() {
         tmp.xmss_index = 256;
 #else
         const uint8_t *p = N_DATA.xmss_nodes + 32 * N_appdata.xmss_index;
-        xmss_gen_keys_2_get_nodes((uint8_t * ) & N_DATA.wots_buffer, (void *) p, &N_DATA.sk, N_appdata.xmss_index);
+        xmss_gen_keys_2_get_nodes((uint8_t *) &N_DATA.wots_buffer, (void *) p, &N_DATA.sk, N_appdata.xmss_index);
         tmp.mode = APPMODE_KEYGEN_RUNNING;
         tmp.xmss_index = N_appdata.xmss_index + 1;
 #endif
@@ -553,19 +555,17 @@ void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
 
 /// This allows extracting the signature by chunks
 void app_sign(volatile uint32_t *tx, uint32_t rx) {
-    uint8_t
-    msg[32];        // Used to store the tx hash
+    uint8_t msg[32];        // Used to store the tx hash
 
     hash_tx(msg);
 
     // buffer[2..3] are ignored (p1, p2)
     xmss_sign_incremental_init(
-            &ctx.xmss_sig_ctx,
-            msg,
-            &N_DATA.sk,
-            (uint8_t * )
-    N_DATA.xmss_nodes,
-            N_appdata.xmss_index);
+        &ctx.xmss_sig_ctx,
+        msg,
+        &N_DATA.sk,
+        (uint8_t *) N_DATA.xmss_nodes,
+        N_appdata.xmss_index);
 
     // Move index forward
     appstorage_t tmp;
@@ -573,10 +573,6 @@ void app_sign(volatile uint32_t *tx, uint32_t rx) {
     tmp.xmss_index = N_appdata.xmss_index + 1;
     nvm_write((void *) &N_appdata.raw, &tmp.raw, sizeof(tmp.raw));
 
-    set_code(G_io_apdu_buffer, 0, APDU_CODE_OK);
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
-
-    view_main_menu();
 }
 
 /// This allows extracting the signature by chunks
@@ -608,6 +604,37 @@ void app_sign_next(volatile uint32_t *tx, uint32_t rx) {
     }
 
     view_update_state(1000);
+}
+
+void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
+    if (rx < 7) {
+        THROW(APDU_CODE_WRONG_LENGTH);
+    }
+
+    const uint8_t p1 = G_io_apdu_buffer[2];
+    const uint8_t p2 = G_io_apdu_buffer[3];
+    const uint8_t *data = G_io_apdu_buffer + 5;
+
+    UNUSED(p1);
+    UNUSED(p2);
+    UNUSED(data);
+
+    memcpy((void *) &ctx.new_idx, data, 2);
+}
+
+void app_setidx(volatile uint32_t *tx, uint32_t rx) {
+    parse_setidx(tx, rx);
+    const uint8_t p1 = G_io_apdu_buffer[2];
+    const uint8_t p2 = G_io_apdu_buffer[3];
+    const uint8_t *data = G_io_apdu_buffer + 5;
+
+    UNUSED(p1);
+    UNUSED(p2);
+    UNUSED(data);
+
+    nvcpy((void *) &N_appdata.xmss_index, data, 2);
+
+    view_update_state(500);
 }
 
 #pragma clang diagnostic push
@@ -671,6 +698,13 @@ void app_main() {
                         debug_printf("SIGNING");
                         app_sign_next(&tx, rx);
                         view_update_state(1000);
+                        THROW(APDU_CODE_OK);
+                        break;
+                    }
+
+                    case INS_SETIDX: {
+                        parse_setidx(&tx, rx);
+                        view_setidx_show();
                         THROW(APDU_CODE_OK);
                         break;
                     }
@@ -764,9 +798,10 @@ void app_main() {
                         sw = e;
                         break;
                     }
-                    default:
+                    default:{
                         sw = 0x6800 | (e & 0x7FF);
                         break;
+                    }
                 }
                 G_io_apdu_buffer[tx] = sw >> 8;
                 G_io_apdu_buffer[tx + 1] = sw;

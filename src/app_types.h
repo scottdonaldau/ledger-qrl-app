@@ -22,5 +22,6 @@
 typedef union {
     xmss_sig_ctx_t xmss_sig_ctx;
     qrltx_t qrltx;
+    uint16_t new_idx;
 } app_ctx_t;
 #pragma pack(pop)

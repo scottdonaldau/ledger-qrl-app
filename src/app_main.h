@@ -32,6 +32,7 @@ extern app_ctx_t ctx;
 #define INS_PUBLIC_KEY          0x03u
 #define INS_SIGN                0x04u
 #define INS_SIGN_NEXT           0x05u
+#define INS_SETIDX              0x06u
 
 #define INS_TEST_PK_GEN_1       0x80
 #define INS_TEST_PK_GEN_2       0x81
@@ -55,5 +56,7 @@ void app_init();
 void app_main();
 
 void app_sign();
+
+void app_setidx();
 
 char app_initialize_xmss_step();
