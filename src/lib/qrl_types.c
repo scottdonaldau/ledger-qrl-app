@@ -23,33 +23,46 @@ int16_t get_qrltx_size(const qrltx_t *tx_p) {
     if (tx_p->subitem_count == 0) {
         return -1;
     }
-    if (tx_p->subitem_count > QRLTX_SUBITEM_MAX) {
-        return -1;
-    }
 
     uint16_t req_size = 1;
     // validate sizes
     switch (tx_p->type) {
         case QRLTX_TX: {
+            if (tx_p->subitem_count > QRLTX_SUBITEM_MAX) {
+                return -1;
+            }
+
             const int16_t delta = PTR_DIST(&tx_p->tx.dst, tx_p);
             req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
             break;
         }
 #ifdef TXTOKEN_ENABLED
         case QRLTX_TXTOKEN: {
+            if (tx_p->subitem_count > QRLTX_SUBITEM_MAX) {
+                return -1;
+            }
+
             const int16_t delta = PTR_DIST(&tx_p->txtoken.dst, tx_p);
             req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
             break;
         }
 #endif
         case QRLTX_SLAVE: {
+            if (tx_p->subitem_count > QRLTX_SUBITEM_MAX) {
+                return -1;
+            }
+
             const int16_t delta = PTR_DIST(&tx_p->slave.slaves, tx_p);
             req_size = delta + sizeof(qrltx_addr_block) * tx_p->subitem_count;
             break;
         }
         case QRLTX_MESSAGE: {
+            if (tx_p->subitem_count > QRLTX_MESSAGE_SUBITEM_MAX) {
+                return -1;
+            }
+
             const int16_t delta = PTR_DIST(&tx_p->msg.message, tx_p);
-            req_size = delta + sizeof(tx_p->msg.message);
+            req_size = delta + sizeof(uint8_t) * tx_p->subitem_count;
             break;
         }
         default:

@@ -60,7 +60,7 @@ unsigned char io_event(unsigned char channel) {
             break;
 
             // unknown events are acknowledged
-        default:{
+        default: {
             UX_DEFAULT_EVENT();
             break;
         }
@@ -73,7 +73,7 @@ unsigned char io_event(unsigned char channel) {
 
 unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
     switch (channel & ~(IO_FLAGS)) {
-        case CHANNEL_KEYBOARD:{
+        case CHANNEL_KEYBOARD: {
             break;
         }
 
@@ -93,7 +93,7 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
             }
         }
 
-        default:{
+        default: {
             THROW(INVALID_PARAMETER);
         }
     }
@@ -110,11 +110,11 @@ void get_seed(uint8_t *seed) {
     memset(seed, 0, 48);
 #else
     uint32_t bip32_path[5] = {
-        0x80000000 | 44,
-        0x80000000 | 238,
-        0x80000000 | 0,
-        0x80000000 | 0,
-        0x80000000 | 0
+            0x80000000 | 44,
+            0x80000000 | 238,
+            0x80000000 | 0,
+            0x80000000 | 0,
+            0x80000000 | 0
     };
 
     union {
@@ -165,7 +165,7 @@ bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx) {
     }
 
     // move the buffer to the tx ctx
-    memcpy((uint8_t *) &ctx.qrltx, msg, rx);
+    memcpy((uint8_t * ) & ctx.qrltx, msg, rx);
 
     return true;
 }
@@ -474,7 +474,8 @@ char app_initialize_xmss_step() {
 
     // Generate all leaves
     if (N_appdata.mode == APPMODE_NOT_INITIALIZED) {
-        uint8_t seed[48];
+        uint8_t
+        seed[48];
 
         get_seed(seed);
 
@@ -500,7 +501,7 @@ char app_initialize_xmss_step() {
         tmp.xmss_index = 256;
 #else
         const uint8_t *p = N_DATA.xmss_nodes + 32 * N_appdata.xmss_index;
-        xmss_gen_keys_2_get_nodes((uint8_t *) &N_DATA.wots_buffer, (void *) p, &N_DATA.sk, N_appdata.xmss_index);
+        xmss_gen_keys_2_get_nodes((uint8_t * ) & N_DATA.wots_buffer, (void *) p, &N_DATA.sk, N_appdata.xmss_index);
         tmp.mode = APPMODE_KEYGEN_RUNNING;
         tmp.xmss_index = N_appdata.xmss_index + 1;
 #endif
@@ -555,17 +556,19 @@ void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
 
 /// This allows extracting the signature by chunks
 void app_sign(volatile uint32_t *tx, uint32_t rx) {
-    uint8_t msg[32];        // Used to store the tx hash
+    uint8_t
+    msg[32];        // Used to store the tx hash
 
     hash_tx(msg);
 
     // buffer[2..3] are ignored (p1, p2)
     xmss_sign_incremental_init(
-        &ctx.xmss_sig_ctx,
-        msg,
-        &N_DATA.sk,
-        (uint8_t *) N_DATA.xmss_nodes,
-        N_appdata.xmss_index);
+            &ctx.xmss_sig_ctx,
+            msg,
+            &N_DATA.sk,
+            (uint8_t * )
+    N_DATA.xmss_nodes,
+            N_appdata.xmss_index);
 
     // Move index forward
     appstorage_t tmp;
@@ -622,17 +625,9 @@ void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
     memcpy((void *) &ctx.new_idx, data, 2);
 }
 
-void app_setidx(volatile uint32_t *tx, uint32_t rx) {
-    parse_setidx(tx, rx);
-    const uint8_t p1 = G_io_apdu_buffer[2];
-    const uint8_t p2 = G_io_apdu_buffer[3];
-    const uint8_t *data = G_io_apdu_buffer + 5;
-
-    UNUSED(p1);
-    UNUSED(p2);
-    UNUSED(data);
-
-    nvcpy((void *) &N_appdata.xmss_index, data, 2);
+void app_setidx() {
+    nvcpy((void *) &N_appdata.xmss_index,
+          (void *) &ctx.new_idx, 2);
 
     view_update_state(500);
 }
@@ -798,7 +793,7 @@ void app_main() {
                         sw = e;
                         break;
                     }
-                    default:{
+                    default: {
                         sw = 0x6800 | (e & 0x7FF);
                         break;
                     }

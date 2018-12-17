@@ -37,6 +37,7 @@ typedef struct {
 /////////////////////////////////////////
 
 #define QRLTX_SUBITEM_MAX 3
+#define QRLTX_MESSAGE_SUBITEM_MAX 80
 #define QUANTA_DECIMALS 9
 
 typedef struct {
@@ -69,7 +70,7 @@ typedef struct {
         qrltx_tx_t tx;
         qrltx_txtoken_t txtoken;
         qrltx_slave_t slave;
-        qrltx_msg_t msg;
+        qrltx_msg_t msg;                                    // for messages, subitem_count indicates number of bytes
     };
 } qrltx_t;                                                  // 222 bytes
 #pragma pack(pop)
