@@ -173,7 +173,7 @@ static unsigned int view_setidx_button(unsigned int button_mask,
             break;
         }
 
-        // Press left to progress to cancel
+            // Press left to progress to cancel
         case BUTTON_EVT_RELEASED | BUTTON_LEFT: {
             // Cancel changing the index
             set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
@@ -452,7 +452,9 @@ void view_txinfo_show() {
                 }
                 case 2: {
                     strcpy(view_buffer_key, "Message");
-                    ARRTOHEX(view_buffer_value, ctx.qrltx.msg.message);
+                    array_to_hexstr(view_buffer_value,
+                                    ctx.qrltx.msg.message,
+                                    ctx.qrltx.subitem_count);
                     break;
                 }
                 default: {
