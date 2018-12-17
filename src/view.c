@@ -88,12 +88,12 @@ static const bagl_element_t view_txinfo[] = {
 };
 
 static const bagl_element_t view_setidx[] = {
-    UI_FillRectangle(0, 0, 0, 128, 32, 0x000000, 0xFFFFFF),
-    UI_Icon(0, 0, 0, 7, 7, BAGL_GLYPH_ICON_LEFT),
-    UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_RIGHT),
-    UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
-    UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
-    UI_LabelLineScrolling(2, 6, 30, 112, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
+        UI_FillRectangle(0, 0, 0, 128, 32, 0x000000, 0xFFFFFF),
+        UI_Icon(0, 0, 0, 7, 7, BAGL_GLYPH_ICON_LEFT),
+        UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_RIGHT),
+        UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
+        UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
+        UI_LabelLineScrolling(2, 6, 30, 112, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
 };
 
 void io_seproxyhal_display(const bagl_element_t *element) {
@@ -168,22 +168,32 @@ static unsigned int view_setidx_button(unsigned int button_mask,
                                        unsigned int button_mask_counter) {
     switch (button_mask) {
         // Press both left and right buttons to quit
-    case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: {
-        view_sign_menu();
-        break;
-    }
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: {
+            // DO NOTHING
+            break;
+        }
 
         // Press left to progress to cancel
-    case BUTTON_EVT_RELEASED | BUTTON_LEFT: {
-        // TODO: Cancel Setidx
-        break;
-    }
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT: {
+            // Cancel changing the index
+            set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
+            io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+            view_update_state(500);
+            view_main_menu();
+            break;
+        }
 
-        // Press right to progress to accept
-    case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
-        // TODO: Accept Setidx
-        break;
-    }
+            // Press right to progress to accept
+        case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+            // Accept changing the index
+            app_setidx();
+
+            set_code(G_io_apdu_buffer, 0, APDU_CODE_OK);
+            io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+            view_update_state(500);
+            view_main_menu();
+            break;
+        }
 
     }
     return 0;
@@ -192,15 +202,15 @@ static unsigned int view_setidx_button(unsigned int button_mask,
 const bagl_element_t *view_setidx_prepro(const bagl_element_t *element) {
 
     switch (element->component.userid) {
-    case 0x01:
-        UX_CALLBACK_SET_INTERVAL(2000);
-        break;
-    case 0x02:
-        UX_CALLBACK_SET_INTERVAL(MAX(3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
-        break;
-    case 0x03:
-        UX_CALLBACK_SET_INTERVAL(MAX(3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
-        break;
+        case 0x01:
+            UX_CALLBACK_SET_INTERVAL(2000);
+            break;
+        case 0x02:
+            UX_CALLBACK_SET_INTERVAL(MAX(3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+            break;
+        case 0x03:
+            UX_CALLBACK_SET_INTERVAL(MAX(3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+            break;
     }
     return element;
 }
@@ -242,25 +252,6 @@ void handler_sign_tx(unsigned int unused) {
 }
 
 void handler_reject_tx(unsigned int unused) {
-    UNUSED(unused);
-
-    set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
-    view_update_state(50);
-    view_main_menu();
-}
-
-void handler_setidx_accept(unsigned int unused) {
-    UNUSED(unused);
-    app_setidx();
-
-    set_code(G_io_apdu_buffer, 0, APDU_CODE_OK);
-    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
-    view_update_state(1000);
-    view_main_menu();
-}
-
-void handler_setidx_reject(unsigned int unused) {
     UNUSED(unused);
 
     set_code(G_io_apdu_buffer, 0, APDU_CODE_COMMAND_NOT_ALLOWED);
