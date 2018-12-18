@@ -610,7 +610,7 @@ void app_sign_next(volatile uint32_t *tx, uint32_t rx) {
 }
 
 void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
-    if (rx < 7) {
+    if (rx != 6) {
         THROW(APDU_CODE_WRONG_LENGTH);
     }
 
@@ -622,13 +622,12 @@ void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
     UNUSED(p2);
     UNUSED(data);
 
-    memcpy((void *) &ctx.new_idx, data, 2);
+    ctx.new_idx = *data;
 }
 
 void app_setidx() {
-    nvcpy((void *) &N_appdata.xmss_index,
-          (void *) &ctx.new_idx, 2);
-
+    uint16_t tmp = ctx.new_idx;
+    nvcpy((void *) &N_appdata.xmss_index, (void *) &tmp, 2);
     view_update_state(500);
 }
 
@@ -672,6 +671,10 @@ void app_main() {
                     }
 
                     case INS_PUBLIC_KEY: {
+                        if (N_appdata.mode != APPMODE_READY) {
+                            THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+                        }
+
                         app_get_pk(&tx, rx);
                         THROW(APDU_CODE_OK);
                         break;
@@ -690,6 +693,10 @@ void app_main() {
                     }
 
                     case INS_SIGN_NEXT: {
+                        if (N_appdata.mode != APPMODE_READY) {
+                            THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+                        }
+
                         debug_printf("SIGNING");
                         app_sign_next(&tx, rx);
                         view_update_state(1000);
@@ -698,9 +705,13 @@ void app_main() {
                     }
 
                     case INS_SETIDX: {
+                        if (N_appdata.mode != APPMODE_READY) {
+                            THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+                        }
+
                         parse_setidx(&tx, rx);
                         view_setidx_show();
-                        THROW(APDU_CODE_OK);
+                        flags |= IO_ASYNCH_REPLY;
                         break;
                     }
 

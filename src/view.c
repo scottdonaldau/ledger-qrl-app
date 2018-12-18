@@ -80,8 +80,8 @@ const ux_menu_entry_t menu_sign[] = {
 
 static const bagl_element_t view_txinfo[] = {
         UI_FillRectangle(0, 0, 0, 128, 32, 0x000000, 0xFFFFFF),
-        UI_Icon(0, 0, 0, 7, 7, BAGL_GLYPH_ICON_CROSS),
-        UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_CHECK),
+        UI_Icon(0, 0, 0, 7, 7, BAGL_GLYPH_ICON_LEFT),
+        UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_RIGHT),
         UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
         UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
         UI_LabelLineScrolling(2, 6, 30, 112, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
@@ -89,8 +89,8 @@ static const bagl_element_t view_txinfo[] = {
 
 static const bagl_element_t view_setidx[] = {
         UI_FillRectangle(0, 0, 0, 128, 32, 0x000000, 0xFFFFFF),
-        UI_Icon(0, 0, 0, 7, 7, BAGL_GLYPH_ICON_LEFT),
-        UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_RIGHT),
+        UI_Icon(0, 0, 0, 7, 7, BAGL_GLYPH_ICON_CROSS),
+        UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_CHECK),
         UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
         UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
         UI_LabelLineScrolling(2, 6, 30, 112, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
@@ -471,9 +471,8 @@ void view_txinfo_show() {
 
 void view_setidx_show() {
     strcpy(view_title, "WARNING!");
-
     strcpy(view_buffer_key, "Set XMSS Index");
-    snprintf(view_buffer_key, sizeof(view_buffer_key), "New Value %d", ctx.new_idx);
+    snprintf(view_buffer_value, sizeof(view_buffer_value), "New Value %d", ctx.new_idx);
 
     UX_DISPLAY(view_setidx, view_setidx_prepro);
 }
