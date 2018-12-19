@@ -109,13 +109,15 @@ void get_seed(uint8_t *seed) {
     // Set the zero to all zeros for reproducible tests
     memset(seed, 0, 48);
 #else
-    uint32_t bip32_path[5] = {
-            0x80000000 | 44,
-            0x80000000 | 238,
-            0x80000000 | 0,
-            0x80000000 | 0,
-            0x80000000 | 0
-    };
+    // uint32_t bip32_path[5] = {
+    //         0x80000000 | 44,
+    //         0x80000000 | 238,
+    //         0x80000000 | 0,
+    //         0x80000000 | 0,
+    //         0x80000000 | 0
+    // };
+
+    unsigned int bip32_path[1] = '0x80000000';
 
     union {
         struct {
@@ -125,10 +127,11 @@ void get_seed(uint8_t *seed) {
         unsigned char all[32];
     } u;
 
-    os_memset(u.seed, 0, sizeof(u.seed));
-    os_memset(u.chain, 0, sizeof(u.chain));
+    // os_memset(u.seed, 0, sizeof(u.seed));
+    // os_memset(u.chain, 0, sizeof(u.chain));
+    os_memset(u, 0, sizeof(u));
 
-    os_perso_derive_node_bip32(CX_CURVE_SECP256K1, bip32_path, 5, u.seed, u.chain);
+    os_perso_derive_node_bip32(CX_CURVE_SECP256K1, bip32_path, 1, u.seed, u.chain);
 
     cx_sha3_t sha3_xof;
     cx_sha3_xof_init(&sha3_xof, 512, 48);
