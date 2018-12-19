@@ -132,8 +132,7 @@ void get_seed(uint8_t *seed) {
 
     cx_sha3_t sha3_xof;
     cx_sha3_xof_init(&sha3_xof, 512, 48);
-
-    cx_hash(&sha3_xof, CX_LAST, u.all, sizeof(u.all), seed, 48);
+    cx_hash(&sha3_xof, CX_LAST, u.all, sizeof(u.all), seed);
 #endif
 }
 
