@@ -122,7 +122,7 @@ void get_seed(uint8_t *seed) {
             unsigned char seed[32];
             unsigned char chain[32];
         };
-        unsigned char all[32];
+        unsigned char all[48];
     } u;
 
     os_memset(u.seed, 0, sizeof(u.seed));
@@ -132,7 +132,6 @@ void get_seed(uint8_t *seed) {
 
     cx_sha3_t sha3_xof;
     cx_sha3_xof_init(&sha3_xof, 512, 48);
-
     cx_hash(&sha3_xof, CX_LAST, u.all, sizeof(u.all), seed, 48);
 #endif
 }
