@@ -62,8 +62,9 @@ DEFINES   += HAVE_BOLOS_APP_STACK_CANARY
 DEFINES   += LEDGER_SPECIFIC
 
 #Feature temporarily disabled
-DEFINES   += TESTING_ENABLED
+#DEFINES   += TESTING_ENABLED
 #DEFINES   += TXTOKEN_ENABLED
+#DEFINES   += SLAVE_ENABLED
 
 # Compiler, assembler, and linker
 

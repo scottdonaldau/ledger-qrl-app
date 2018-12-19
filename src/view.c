@@ -397,6 +397,7 @@ void view_txinfo_show() {
             break;
         }
 #endif
+#ifdef SLAVE_ENABLED
         case QRLTX_SLAVE: {
             strcpy(view_title, "CREATE SLAVE");
 
@@ -431,6 +432,7 @@ void view_txinfo_show() {
             }
             break;
         }
+#endif
         case QRLTX_MESSAGE: {
             strcpy(view_title, "MESSAGE");
 
