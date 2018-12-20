@@ -104,35 +104,37 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len) {
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
 
-void get_seed(uint8_t *seed) {
-#ifdef TESTING_ENABLED
-    // Set the zero to all zeros for reproducible tests
-    memset(seed, 0, 48);
-#else
-    uint32_t bip32_path[5] = {
-            0x80000000 | 44,
-            0x80000000 | 238,
-            0x80000000 | 0,
-            0x80000000 | 0,
-            0x80000000 | 0
-    };
+const uint32_t bip32_path[5] = {
+        0x80000000 | 44,
+        0x80000000 | 238,
+        0x80000000 | 0,
+        0x80000000 | 0,
+        0x80000000 | 0
+};
 
+void get_seed(uint8_t *seed) {
     union {
+        unsigned char all[64];
         struct {
             unsigned char seed[32];
             unsigned char chain[32];
         };
-        unsigned char all[48];
     } u;
 
-    os_memset(u.seed, 0, sizeof(u.seed));
-    os_memset(u.chain, 0, sizeof(u.chain));
+    memset(seed, 0, 48);
 
+#ifdef TESTING_MOCKSEED
+    // Keep as all zeros for reproducible tests
+#else
+    unsigned char tmp_out[64];
+
+    os_memset(u.all, 0, 64);
     os_perso_derive_node_bip32(CX_CURVE_SECP256K1, bip32_path, 5, u.seed, u.chain);
 
-    cx_sha3_t sha3_xof;
-    cx_sha3_xof_init(&sha3_xof, 512, 48);
-    cx_hash(&sha3_xof, CX_LAST, u.all, sizeof(u.all), seed, 48);
+    cx_sha3_t hash_sha3;
+    cx_sha3_init(&hash_sha3, 512);
+    cx_hash(&hash_sha3.header, CX_LAST, u.all, 64, tmp_out, 64);
+    memcpy(seed, tmp_out, 48);
 #endif
 }
 
@@ -625,7 +627,7 @@ void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
 }
 
 void app_setidx() {
-    uint16_t tmp = ctx.new_idx;
+    const uint16_t tmp = ctx.new_idx;
     nvcpy((void *) &N_appdata.xmss_index, (void *) &tmp, 2);
     view_update_state(500);
 }
