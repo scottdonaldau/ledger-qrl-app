@@ -557,8 +557,15 @@ void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
 
 /// This allows extracting the signature by chunks
 void app_sign(volatile uint32_t *tx, uint32_t rx) {
-    uint8_t
-    msg[32];        // Used to store the tx hash
+    uint8_t msg[32];        // Used to store the tx hash
+
+    if (N_appdata.mode != APPMODE_READY) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
+
+    if (N_appdata.xmss_index >= 256) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
 
     hash_tx(msg);
 
@@ -650,8 +657,9 @@ void app_main() {
                 rx = io_exchange(CHANNEL_APDU | flags, rx);
                 flags = 0;
 
-                if (rx == 0)
+                if (rx == 0) {
                     THROW(0x6982);
+                }
 
                 if (G_io_apdu_buffer[OFFSET_CLA] != CLA) {
                     THROW(APDU_CODE_CLA_NOT_SUPPORTED);
