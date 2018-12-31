@@ -528,16 +528,15 @@ char app_initialize_xmss_step() {
 }
 
 void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
+    if (N_appdata.mode != APPMODE_READY) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
     if (rx < 5) {
         THROW(APDU_CODE_WRONG_LENGTH);
     }
     const uint8_t p1 = G_io_apdu_buffer[2];
     const uint8_t p2 = G_io_apdu_buffer[3];
     const uint8_t *data = G_io_apdu_buffer + 5;
-
-    if (N_appdata.mode != APPMODE_READY) {
-        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
-    }
 
     UNUSED(p1);
     UNUSED(p2);
@@ -557,8 +556,6 @@ void app_get_pk(volatile uint32_t *tx, uint32_t rx) {
 
 /// This allows extracting the signature by chunks
 void app_sign(volatile uint32_t *tx, uint32_t rx) {
-    uint8_t msg[32];        // Used to store the tx hash
-
     if (N_appdata.mode != APPMODE_READY) {
         THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
     }
@@ -567,6 +564,7 @@ void app_sign(volatile uint32_t *tx, uint32_t rx) {
         THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
     }
 
+    uint8_t msg[32];        // Used to store the tx hash
     hash_tx(msg);
 
     // buffer[2..3] are ignored (p1, p2)
@@ -591,8 +589,9 @@ void app_sign_next(volatile uint32_t *tx, uint32_t rx) {
     if (N_appdata.mode != APPMODE_READY) {
         THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
     }
-
-    // TODO: Check there is a signature available to be downloaded
+    if (ctx.xmss_sig_ctx.sig_chunk_idx > 10) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
 
     const uint8_t p1 = G_io_apdu_buffer[2];
     const uint8_t p2 = G_io_apdu_buffer[3];
@@ -621,6 +620,9 @@ void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
     if (rx != 6) {
         THROW(APDU_CODE_WRONG_LENGTH);
     }
+    if (N_appdata.mode != APPMODE_READY) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
 
     const uint8_t p1 = G_io_apdu_buffer[2];
     const uint8_t p2 = G_io_apdu_buffer[3];
@@ -634,6 +636,10 @@ void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
 }
 
 void app_setidx() {
+    if (N_appdata.mode != APPMODE_READY) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
+
     const uint16_t tmp = ctx.new_idx;
     nvcpy((void *) &N_appdata.xmss_index, (void *) &tmp, 2);
     view_update_state(500);
