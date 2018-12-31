@@ -29,7 +29,7 @@ include $(BOLOS_SDK)/Makefile.defines
 # Main app configuration
 APPNAME = "QRL"
 APPVERSION_M=0
-APPVERSION_N=4
+APPVERSION_N=9
 APPVERSION_P=0
 
 APP_LOAD_PARAMS = --appFlags 0x00 --delete $(COMMON_LOAD_PARAMS) --path "44'/238'"
