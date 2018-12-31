@@ -29,10 +29,10 @@ ICONHEX=$(python ${BOLOS_SDK}/icon.py ${ICONNAME} hexbitmaponly)
 
 cat >${SCRIPT_DIR}/pkgdemo/loaddemo.sh <<EOL
 #!/usr/bin/env bash
-pip install -U setuptools ledgerblue>=0.1.21
+pip3 install -U setuptools ledgerblue>=0.1.21
 
 SCRIPT_DIR=\$(cd \$(dirname \$0) && pwd)
-python -m ledgerblue.loadApp --appFlags 0x00 --tlv --targetId ${TARGET_ID} --delete --fileName \${SCRIPT_DIR}/app.hex --appName ${APPNAME} --appVersion ${APPVERSION} --icon ${ICONHEX} --dataSize ${DATASIZE}
+python3 -m ledgerblue.loadApp --appFlags 0x00 --tlv --targetId ${TARGET_ID} --delete --fileName \${SCRIPT_DIR}/app.hex --appName ${APPNAME} --appVersion ${APPVERSION} --icon ${ICONHEX} --dataSize ${DATASIZE}
 EOL
 
 chmod +x ${SCRIPT_DIR}/pkgdemo/loaddemo.sh
