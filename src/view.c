@@ -294,11 +294,17 @@ void view_update_state(uint16_t interval) {
         }
             break;
         case APPMODE_READY: {
+            if (N_appdata.xmss_index >= 256) {
+                snprintf(view_buffer_value, sizeof(view_buffer_value), "NO SIGS LEFT");
+                break;
+            }
+
             if (N_appdata.xmss_index > 250) {
                 snprintf(view_buffer_value, sizeof(view_buffer_value), "WARN! rem:%03d", 256 - N_appdata.xmss_index);
-            } else {
-                snprintf(view_buffer_value, sizeof(view_buffer_value), "READY rem:%03d", 256 - N_appdata.xmss_index);
+                break;
             }
+
+            snprintf(view_buffer_value, sizeof(view_buffer_value), "READY rem:%03d", 256 - N_appdata.xmss_index);
         }
             break;
     }
