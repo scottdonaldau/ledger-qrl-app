@@ -700,6 +700,10 @@ void app_main() {
                             THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
                         }
 
+                        if (N_appdata.xmss_index >= 256) {
+                            THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+                        }
+
                         parse_unsigned_message(&tx, rx);
 
                         view_sign_menu();
