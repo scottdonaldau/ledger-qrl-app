@@ -36,6 +36,7 @@ unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 app_ctx_t ctx;
 
 bool parse_unsigned_message(volatile uint32_t *tx, uint32_t rx);
+bool parse_view_address(volatile uint32_t *tx, uint32_t rx);
 
 void hash_tx(uint8_t msg[32]);
 
@@ -581,7 +582,6 @@ void app_sign(volatile uint32_t *tx, uint32_t rx) {
     tmp.mode = APPMODE_READY;
     tmp.xmss_index = N_appdata.xmss_index + 1;
     nvm_write((void *) &N_appdata.raw, &tmp.raw, sizeof(tmp.raw));
-
 }
 
 /// This allows extracting the signature by chunks
@@ -633,6 +633,25 @@ void parse_setidx(volatile uint32_t *tx, uint32_t rx) {
     UNUSED(data);
 
     ctx.new_idx = *data;
+}
+
+bool parse_view_address(volatile uint32_t *tx, uint32_t rx) {
+    if (N_appdata.mode != APPMODE_READY) {
+        THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+    }
+    if (rx < 5) {
+        THROW(APDU_CODE_WRONG_LENGTH);
+    }
+
+    const uint8_t p1 = G_io_apdu_buffer[2];
+    const uint8_t p2 = G_io_apdu_buffer[3];
+    const uint8_t *data = G_io_apdu_buffer + 5;
+
+    UNUSED(p1);
+    UNUSED(p2);
+    UNUSED(data);
+
+    return true;
 }
 
 void app_setidx() {
@@ -730,6 +749,17 @@ void app_main() {
 
                         parse_setidx(&tx, rx);
                         view_setidx_show();
+                        flags |= IO_ASYNCH_REPLY;
+                        break;
+                    }
+
+                    case INS_VIEW_ADDRESS: {
+                        if (N_appdata.mode != APPMODE_READY) {
+                            THROW(APDU_CODE_COMMAND_NOT_ALLOWED);
+                        }
+
+                        parse_view_address(&tx, rx);
+                        view_address_show();
                         flags |= IO_ASYNCH_REPLY;
                         break;
                     }

@@ -38,6 +38,7 @@ void view_main_menu(void);
 void view_sign_menu(void);
 void view_txinfo_show();
 void view_setidx_show();
+void view_address_show();
 
 void view_update_state(uint16_t interval);
 

@@ -96,6 +96,14 @@ static const bagl_element_t view_setidx[] = {
         UI_LabelLineScrolling(2, 6, 30, 112, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
 };
 
+static const bagl_element_t view_address[] = {
+        UI_FillRectangle(0, 0, 0, 128, 32, 0x000000, 0xFFFFFF),
+        UI_Icon(0, 128 - 7, 0, 7, 7, BAGL_GLYPH_ICON_CHECK),
+        UI_LabelLine(1, 0, 8, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_title),
+        UI_LabelLine(1, 0, 19, 128, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_key),
+        UI_LabelLineScrolling(2, 6, 30, 112, 11, 0xFFFFFF, 0x000000, (const char *) view_buffer_value),
+};
+
 void io_seproxyhal_display(const bagl_element_t *element) {
     io_seproxyhal_display_default((bagl_element_t *) element);
 }
@@ -199,6 +207,35 @@ static unsigned int view_setidx_button(unsigned int button_mask,
     return 0;
 }
 
+static unsigned int view_address_button(unsigned int button_mask,
+                                       unsigned int button_mask_counter) {
+    switch (button_mask) {
+        // Press both left and right buttons to quit
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT | BUTTON_RIGHT: {
+            // DO NOTHING
+            break;
+        }
+
+        // Press left to progress to cancel
+        case BUTTON_EVT_RELEASED | BUTTON_LEFT: {
+            // DO NOTHING
+            break;
+        }
+
+        // Press right to progress to accept
+        case BUTTON_EVT_RELEASED | BUTTON_RIGHT: {
+            // Go back to main menu
+            set_code(G_io_apdu_buffer, 0, APDU_CODE_OK);
+            io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, 2);
+            view_update_state(500);
+            view_main_menu();
+            break;
+        }
+
+    }
+    return 0;
+}
+
 const bagl_element_t *view_setidx_prepro(const bagl_element_t *element) {
 
     switch (element->component.userid) {
@@ -214,6 +251,23 @@ const bagl_element_t *view_setidx_prepro(const bagl_element_t *element) {
     }
     return element;
 }
+
+const bagl_element_t *view_address_prepro(const bagl_element_t *element) {
+
+    switch (element->component.userid) {
+        case 0x01:
+            UX_CALLBACK_SET_INTERVAL(2000);
+            break;
+        case 0x02:
+            UX_CALLBACK_SET_INTERVAL(MAX(3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+            break;
+        case 0x03:
+            UX_CALLBACK_SET_INTERVAL(MAX(3000, 1000 + bagl_label_roundtrip_duration_ms(element, 7)));
+            break;
+    }
+    return element;
+}
+
 
 ////////////////////////////////////////////////
 ////////////////////////////////////////////////
@@ -483,4 +537,50 @@ void view_setidx_show() {
     snprintf(view_buffer_value, sizeof(view_buffer_value), "New Value %d", ctx.new_idx);
 
     UX_DISPLAY(view_setidx, view_setidx_prepro);
+}
+
+void view_address_show() {
+    // See https://docs.theqrl.org/developers/address/#format-sha256_2x
+    // Add Ledger Nano S wallet address descriptor
+    unsigned char desc[3];
+    desc[0] = 0; // XMSS, SHA2-256
+    desc[1] = 4; // Height 8
+    desc[2] = 0; // SHA256_X
+
+    // Copy raw pk into pk
+    unsigned char pk[64];
+    memcpy(pk, N_appdata.pk.raw,64);
+
+    // Copy desc and pk to form extended_pubkey
+    unsigned char extended_pubkey[67];
+    memcpy(extended_pubkey, desc, 3);
+    memcpy(extended_pubkey + 3, pk, 64);
+
+    // Objects to store sha256 hashes in
+    unsigned char hash_out[32];
+    unsigned char verh_out[32];
+
+    // Calculate HASH - sha2-256(DESC+PK)
+    cx_hash_sha256(extended_pubkey, 67, hash_out, 32);
+
+    // Copy desc and hash_out to create hashable bytes for verification checksum
+    unsigned char verification_sum[35];
+    memcpy(verification_sum, desc, 3);
+    memcpy(verification_sum + 3, hash_out, 32);
+
+    // Calculate VERH - sha2-256(DESC+hash_out)
+    cx_hash_sha256(verification_sum, 35, verh_out, 32);
+
+    // Now join desc, hash_out and last 4 bytes of verh_out to form address
+    unsigned char address[39];
+    memcpy(address, desc, 3);
+    memcpy(address + 3, hash_out, 32);
+    memcpy(address + 3 + 32, verh_out + 28, 4);
+
+    // Prepare for display
+    strcpy(view_title, "VERIFY");
+    strcpy(view_buffer_key, "Your QRL Address");
+    view_buffer_value[0] = 'Q';
+    ARRTOHEX(view_buffer_value + 1, address);
+    UX_DISPLAY(view_address, view_address_prepro);
 }

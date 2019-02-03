@@ -23,7 +23,7 @@ APPNAME=$1
 APPVERSION=$2
 ICONNAME=$3
 
-TARGET_ID=0x31100003
+TARGET_ID=0x31100004
 DATASIZE=$(cat ${SCRIPT_DIR}/debug/app.map |grep _nvram_data_size | tr -s ' ' | cut -f2 -d' ')
 ICONHEX=$(python ${BOLOS_SDK}/icon.py ${ICONNAME} hexbitmaponly)
 

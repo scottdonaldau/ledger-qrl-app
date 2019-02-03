@@ -33,6 +33,7 @@ extern app_ctx_t ctx;
 #define INS_SIGN                0x04u
 #define INS_SIGN_NEXT           0x05u
 #define INS_SETIDX              0x06u
+#define INS_VIEW_ADDRESS        0x07u
 
 #define INS_TEST_PK_GEN_1       0x80
 #define INS_TEST_PK_GEN_2       0x81
